@@ -60,6 +60,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
+      - name: Init OUTPUTS
+        shell: bash
+        run: mkdir -p OUTPUTS && : > OUTPUTS/errors.md
 
       - name: Tools & auth (no login needed; GH_TOKEN in env)
         run: |
@@ -67,6 +71,17 @@ jobs:
           gh --version
           jq --version
           gh auth status -h github.com || true
+
+
+
+          # LENIENT smoke test: warn if we cannot list projects, but don't fail the job
+          if ! gh project list --owner "${PROJECT_OWNER}" --limit 1; then
+            echo "⚠ Warning: Could not list projects for ${PROJECT_OWNER}. This may indicate insufficient permissions."
+          fi
+          
+          # STRICT alternative (uncomment to fail fast on permissions):
+          gh project list --owner "${PROJECT_OWNER}" --limit 1
+
 
       - name: Resolve data file from glob
         id: datafile

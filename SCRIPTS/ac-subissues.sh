@@ -1,110 +1,169 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage() {
-  cat <<EOF
-Usage: $(basename "$0") [DATA_FILE or GLOB]
-Creates sub-issues from the parent row's body by splitting on ';'.
-Inherits labels from the row. Links child issues in the parent's body.
+# Load common helpers
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
 
-Env:
-  GH_REPO    (required) e.g. owner/repo
-  DATA_FILE  (optional) used if no positional arg
-  PARENT_MAP (optional) defaults to OUTPUTS/issue_map.tsv
-
-Outputs:
-  OUTPUTS/subissue_map.tsv  (ParentTitle \\t ChildTitle \\t ChildURL \\t ChildNumber)
-EOF
-}
-[[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
-
-: "${GH_REPO:?Set GH_REPO=owner/repo}"
-PARENT_MAP="${PARENT_MAP:-OUTPUTS/issue_map.tsv}"
-
-DATA_SPEC="${1:-${DATA_FILE:-}}"
-[[ -n "$DATA_SPEC" ]] || { echo "ERROR: provide DATA_FILE or glob (arg or env)."; usage; exit 1; }
-
-# Resolve glob -> choose latest mtime
-shopt -s nullglob
-matches=( $DATA_SPEC )
-(( ${#matches[@]} > 0 )) || { echo "ERROR: no files match: $DATA_SPEC" >&2; exit 1; }
-if (( ${#matches[@]} > 1 )); then
-  DATA_FILE="$(ls -1t "${matches[@]}" | head -n1)"
-else
-  DATA_FILE="${matches[0]}"
-fi
-shopt -u nullglob
-
-[[ -f "$PARENT_MAP" ]] || { echo "ERROR: missing parent map: $PARENT_MAP (run ab-issues.sh first)"; exit 1; }
-
-GH_REPO_FLAG=(--repo "$GH_REPO")
-DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
+DATA_FILE="${1:?Usage: ac-subissues.sh <TSV_FILE>}"
+PARENT_MAP="${PARENT_MAP:-OUTPUTS/issue_map.tsv}"  # Title \t URL \t Number
 
 mkdir -p OUTPUTS
-SUBMAP_OUT="OUTPUTS/subissue_map.tsv"
-: > "$SUBMAP_OUT"
+touch OUTPUTS/errors.md
+: > OUTPUTS/subissue_map.tsv
 
-# Load parent map Title -> {URL, Number}
-declare -A T2URL T2NUM
-while IFS=$'\t' read -r t u n; do
-  [[ -z "${t:-}" ]] && continue
-  T2URL["$t"]="$u"
-  T2NUM["$t"]="$n"
-done < "$PARENT_MAP"
+normalize() {
+  tr '[:upper:]' '[:lower:]' | sed -E 's/[[:space:]]+/ /g;s/^ | $//g'
+}
+sha12() { sha1sum | cut -c1-12; }
 
-# Headers
-IFS= read -r HEADER_LINE < "$DATA_FILE" || { echo "ERROR: empty file: $DATA_FILE"; exit 1; }
-mapfile -t HEADERS < <(printf '%s' "$HEADER_LINE" | tr -d '\r' | awk -v FS="$DELIM" '{for(i=1;i<=NF;i++)print $i}')
+# ---- Header detection helpers (match ab-issues.sh) ----
+is_title_col() { local h="${1,,}"; [[ "$h" =~ ^title$ || "$h" =~ ^issue[ _-]?title$ || "$h" == *"title"* ]]; }
+is_body_col()  { local h="${1,,}"; [[ "$h" =~ ^body$  || "$h" =~ ^issue[ _-]?body$  || "$h" == *"body"*  ]]; }
+is_label_col() {
+  local h="${1,,}"
+  [[ "$h" =~ ^label(s)?$ ]] || [[ "$h" =~ ^issue[_-]?label(_[0-9]+)?$ ]] || [[ "$h" == labels* ]]
+}
+is_project_field_col() {
+  local h="${1,,}"
+  [[ "$h" =~ ^project(_)?field ]] || [[ "$h" =~ ^project_field_ ]] || [[ "$h" =~ ^project: ]] || [[ "$h" =~ ^field: ]]
+}
 
-TITLE_IDX=-1; BODY_IDX=-1; declare -a LABEL_IDXS=()
+# ---- Load parent map (Title -> Number) ----
+declare -A TITLE_TO_NUM
+if [[ -f "$PARENT_MAP" ]]; then
+  # Expect: Title \t URL \t Number
+  while IFS=$'\t' read -r t _ n; do
+    [[ -z "${t// }" || -z "${n// }" ]] && continue
+    TITLE_TO_NUM["$t"]="$n"
+  done < <(tail -n +1 "$PARENT_MAP")
+else
+  echo "ERROR: Parent map not found at $PARENT_MAP" >&2
+  exit 1
+fi
+
+# ---- Parse TSV header ----
+IFS=$'\t' read -r -a HEADERS < <(head -n1 "$DATA_FILE")
+title_idx=-1; body_idx=-1; label_idxs=()
+
 for i in "${!HEADERS[@]}"; do
-  lh="${HEADERS[$i],,}"
-  (( TITLE_IDX < 0 )) && [[ "$lh" == *"title"* ]] && TITLE_IDX=$i
-  (( BODY_IDX  < 0 )) && [[ "$lh" == *"body"*  ]] && BODY_IDX=$i
-  [[ "$lh" == *"label"* ]] && LABEL_IDXS+=("$i")
+  hdr="${HEADERS[$i]}"
+  if [[ $title_idx -lt 0 ]] && is_title_col "$hdr"; then title_idx=$i; fi
+  if [[ $body_idx  -lt 0 ]] && is_body_col  "$hdr";  then body_idx=$i;  fi
+  if is_label_col "$hdr" && ! is_project_field_col "$hdr"; then
+    label_idxs+=("$i")
+  fi
 done
-(( TITLE_IDX >= 0 && BODY_IDX >= 0 )) || { echo "ERROR: need *title* and *body* columns"; exit 1; }
 
-TMPDIR="$(mktemp -d)"; trap 'rm -rf "$TMPDIR"' EXIT
+if [[ $title_idx -lt 0 ]]; then
+  echo "ERROR: No title column found in TSV header." >&2
+  exit 1
+fi
+# body is needed for sub-issue tokens
+if [[ $body_idx -lt 0 ]]; then
+  echo "WARN: No body column found; no sub-issues to create." >&2
+  exit 0
+fi
 
-# Process rows
-while IFS= read -r line; do
-  IFS="$DELIM" read -r -a vals <<< "$(printf '%s' "$line" | tr -d '\r')"
+# ---- Process each parent row ----
+tail -n +2 "$DATA_FILE" | while IFS=$'\t' read -r -a ROW || [[ -n "${ROW[*]-}" ]]; do
+  PARENT_TITLE="${ROW[$title_idx]-}"
+  [[ -z "${PARENT_TITLE// }" ]] && continue
 
-  ptitle="${vals[$TITLE_IDX]:-}"
-  [[ -z "$ptitle" ]] && { echo "skip: empty parent title"; continue; }
+  PARENT_NUM="${TITLE_TO_NUM[$PARENT_TITLE]-}"
+  if [[ -z "$PARENT_NUM" ]]; then
+    log_error "subissues.parent_lookup:$PARENT_TITLE" "no parent number in $PARENT_MAP"
+    continue
+  fi
 
-  purl="${T2URL[$ptitle]:-}"; pnum="${T2NUM[$ptitle]:-}"
-  [[ -z "$purl" || -z "$pnum" ]] && { echo "skip: parent not found in map: $ptitle"; continue; }
+  BODY_CONTENT="${ROW[$body_idx]-}"
+  [[ -z "${BODY_CONTENT// }" ]] && continue
 
-  body_raw="${vals[$BODY_IDX]:-}"
-  IFS=';' read -r -a subs <<< "$body_raw"
-
-  # inherit labels
-  label_args=()
-  for idx in "${LABEL_IDXS[@]}"; do
-    v="${vals[$idx]:-}"
-    v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"
-    [[ -n "$v" ]] && label_args+=("--label" "$v")
+  # Build label list from row (filtering out project-field-ish headers; id keys are filtered later)
+  row_labels=()
+  for idx in "${label_idxs[@]}"; do
+    val="${ROW[$idx]-}"
+    [[ -z "${val// }" ]] && continue
+    row_labels+=("$val")
   done
 
-  for token in "${subs[@]}"; do
-    st="$(printf '%s' "$token" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
-    [[ -z "$st" ]] && continue
+  # Extract sub-issue tokens: split on ';'
+  IFS=';' read -r -a TOKENS <<< "$BODY_CONTENT"
 
-    echo "create sub-issue: $st"
-    curl="$(gh "${GH_REPO_FLAG[@]}" issue create --title "$st" --body "" "${label_args[@]}")"
-    cnum="$(basename "$curl")"
-    printf "%s\t%s\t%s\t%s\n" "$ptitle" "$st" "$curl" "$cnum" >> "$SUBMAP_OUT"
+  for raw_token in "${TOKENS[@]}"; do
+    SUB_TITLE="$(printf '%s' "$raw_token" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+    [[ -z "${SUB_TITLE// }" ]] && continue
 
-    # Attach to parent via task list
-    pbody="$TMPDIR/p.txt"
-    gh "${GH_REPO_FLAG[@]}" issue view "$pnum" --json body -q '.body' > "$pbody"
-    printf '\n- [ ] %s (#%s)\n' "$st" "$cnum" >> "$pbody"
-    gh "${GH_REPO_FLAG[@]}" issue edit "$pnum" --body-file "$pbody"
+    # --- Sub-issue UID & key label (derived from parent title + sub title) ---
+    parent_norm="$(printf '%s' "$PARENT_TITLE" | normalize)"
+    sub_norm="$(printf '%s' "$SUB_TITLE" | normalize)"
+    SUB_UID="$(printf '%s|%s' "$parent_norm" "$sub_norm" | sha12)"
+    SUB_KEY="imp-key-$SUB_UID"
 
-    sleep 1
+    # Idempotency check: existing issue with this key
+    existing="$(gh issue list --repo "$GH_REPO" \
+                --search "label:$SUB_KEY" \
+                --json number --jq '.[0].number' 2>/dev/null || true)"
+
+    if [[ -n "$existing" ]]; then
+      # best-effort URL
+      ex_url="$(gh issue view "$existing" --repo "$GH_REPO" --json url --jq '.url' 2>/dev/null || true)"
+      printf "%s\t%s\t%s\t%s\n" "$PARENT_TITLE" "$SUB_TITLE" "${ex_url:-}" "$existing" >> OUTPUTS/subissue_map.tsv
+      echo "Skip (idempotent): sub-issue '$SUB_TITLE' exists as #$existing (parent #$PARENT_NUM)"
+      # Ensure checklist link exists (optional, idempotent append)
+      # (We won't fail if we can't patch the body)
+      parent_body="$(gh issue view "$PARENT_NUM" --repo "$GH_REPO" --json body --jq '.body' 2>/dev/null || echo "")"
+      line="- [ ] $SUB_TITLE (#$existing)"
+      if ! grep -Fqx "$line" <<<"$parent_body"; then
+        new_body="$parent_body"$'\n'"$line"
+        safe "parent.body.append:#$PARENT_NUM:$SUB_TITLE" gh issue edit "$PARENT_NUM" --repo "$GH_REPO" --body "$new_body"
+      fi
+      continue
+    fi
+
+    # --- Build labels for the sub-issue: inherit row labels, filtering ---
+    inherit=()
+    for L in "${row_labels[@]}"; do
+      [[ "$L" == imp-key-* ]] && continue
+      [[ "$L" =~ ^PROJECT_FIELD_ ]] && continue
+      inherit+=("$L")
+    done
+    # always include the sub key label
+    all_labels=("$SUB_KEY" "${inherit[@]}")
+
+    # Ensure key label exists (non-blocking)
+    safe "label.create:$SUB_KEY" \
+      gh label create "$SUB_KEY" --repo "$GH_REPO" --color "ededed" --description "Import idempotency key"
+
+    # Create sub-issue
+    create_args=(--repo "$GH_REPO" --title "$SUB_TITLE" --json number,url --jq '.number+" "+.url')
+    if [[ ${#all_labels[@]} -gt 0 ]]; then
+      # dedupe
+      declare -A seen=(); dedup=()
+      for l in "${all_labels[@]}"; do
+        [[ -n "${seen[$l]-}" ]] && continue; seen[$l]=1; dedup+=("$l")
+      done
+      create_args+=(--label "$(IFS=,; echo "${dedup[*]}")")
+    fi
+
+    out=""
+    if ! out="$(gh issue create "${create_args[@]}")"; then
+      log_error "subissue.create:$PARENT_TITLE->$SUB_TITLE" "gh issue create failed"
+      continue
+    fi
+    sub_num="$(awk '{print $1}' <<<"$out")"
+    sub_url="$(awk '{print $2}' <<<"$out")"
+
+    # Link in parent checklist (idempotent append)
+    parent_body="$(gh issue view "$PARENT_NUM" --repo "$GH_REPO" --json body --jq '.body' 2>/dev/null || echo "")"
+    line="- [ ] $SUB_TITLE (#$sub_num)"
+    if ! grep -Fqx "$line" <<<"$parent_body"; then
+      new_body="$parent_body"$'\n'"$line"
+      safe "parent.body.append:#$PARENT_NUM:$SUB_TITLE" gh issue edit "$PARENT_NUM" --repo "$GH_REPO" --body "$new_body"
+    fi
+
+    # Map it
+    printf "%s\t%s\t%s\t%s\n" "$PARENT_TITLE" "$SUB_TITLE" "$sub_url" "$sub_num" >> OUTPUTS/subissue_map.tsv
+    echo "Created sub-issue '$SUB_TITLE' (#$sub_num) under parent #$PARENT_NUM"
   done
-done < <(tail -n +2 "$DATA_FILE")
-
-echo "sub-issues done (source: $DATA_FILE). map: $SUBMAP_OUT"
+done
