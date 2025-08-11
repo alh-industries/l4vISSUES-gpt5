@@ -40,7 +40,7 @@ on:
 permissions:
   contents: read
   issues: write
-  projects: write
+  repository-projects: write
 
 jobs:
   import:
