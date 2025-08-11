@@ -70,7 +70,7 @@ SCRIPTS/         # Modular Bash scripts for each import stage
 OUTPUTS/         # Generated during runs (maps, logs, outputs)
 .github/
 └── workflows/
-    └── runALL.yml  # Manual trigger GitHub Action to run the scripts
+    └── manual-import.yml  # Manual trigger GitHub Action to run the scripts
 ```
 
 ## 🛠 Modular Script Flow
@@ -212,11 +212,6 @@ Run in this exact order:
 4) ad-project.sh — idempotent (reuse or create project; avoid duplicate items)  
 5) ae-fields.sh — idempotent (fields/options created only if missing; values reapplied safely)
 
-Tip: use the convenience runner:
-```
-./run.sh
-```
-
 ## Requirements
 - Bash 4+ (macOS users: `brew install bash` and run with `/usr/local/bin/bash` or `/opt/homebrew/bin/bash`)
 - GitHub CLI: `gh` (authenticated: `gh auth login`)
@@ -229,7 +224,7 @@ git clone https://github.com/<you>/<repo>.git
 cd <repo>
 
 # make scripts executable
-chmod +x aa-labels.sh ab-issues.sh ac-subissues.sh ad-project.sh ae-fields.sh run.sh
+chmod +x aa-labels.sh ab-issues.sh ac-subissues.sh ad-project.sh ae-fields.sh
 
 # authenticate GH CLI (once per machine)
 gh auth login
