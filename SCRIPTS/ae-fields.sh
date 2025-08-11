@@ -120,7 +120,10 @@ done < "$PARENT_MAP"
 
 # ---- Apply values to items ----
 while IFS= read -r line; do
-  IFS="$DELIM" read -r -a vals <<< "$(printf '%s' "$line" | tr -d '\r')"
+  mapfile -t vals < <(
+    printf '%s' "$line" | tr -d '\r' |
+    awk -v FS="$DELIM" '{for(i=1;i<=NF;i++) print $i}'
+  )
   title="${vals[$TITLE_IDX]:-}"
   [[ -z "$title" ]] && continue
 
