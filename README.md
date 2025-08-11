@@ -1,3 +1,138 @@
+# GitHub Project TSV Import Automation
+
+This repository contains a **modular, multi-step import system** for creating GitHub Labels, Issues, Sub-issues, Projects, and Project Fields from a TSV or CSV file.
+
+## 📂 Repo Structure
+
+```
+TSV_HERE/        # Place your TSV or CSV data files here
+SCRIPTS/         # Modular Bash scripts for each import stage
+OUTPUTS/         # Generated during runs (maps, logs, outputs)
+.github/
+└── workflows/
+    └── runALL.yml  # Manual trigger GitHub Action to run the scripts
+```
+
+## 🛠 Modular Script Flow
+
+Scripts are intentionally **short, DRY, and modular**. Each does one thing, so you can run them separately or chain them via the included GitHub Action.
+
+Order of operation (alphabetical naming keeps them in sequence):
+
+1. **aa-labels.sh**  
+   - Reads TSV/CSV  
+   - Creates all unique labels (idempotent — no duplicates)  
+   - Skips color and description (optional in GitHub CLI)
+
+2. **ab-issues.sh**  
+   - Reads TSV/CSV  
+   - Creates issues and attaches labels  
+   - **No idempotency** (one-off import)  
+
+3. **ac-subissues.sh**  
+   - Parses `ISSUE_BODY` column for `;`-delimited sub-issues  
+   - Creates sub-issues  
+   - Assigns labels and links to parent issues  
+   - **No idempotency**  
+
+4. **ad-project.sh**  
+   - Creates or reuses a GitHub Project  
+   - Adds all issues and sub-issues to the project  
+   - Saves project number to `OUTPUTS/project_number.txt`
+
+5. **ae-fields.sh**  
+   - Reads TSV/CSV for project field definitions and options  
+   - Creates project fields and options (idempotent)  
+   - Updates field values for issues in the project
+
+---
+
+## ⚡ Running from GitHub Web
+
+You can run the full pipeline **manually** via the `Manual Import` workflow.
+
+### **One-time setup**
+1. Ensure `.github/workflows/manual-import.yml` exists on your default branch.  
+2. Put your TSV/CSV in `TSV_HERE/`.  
+3. In repo settings → **Actions → General**, set:  
+   > Workflow permissions → **Read and write permissions**  
+4. (Org projects only) — Create a **classic PAT** with:
+   - `repo`
+   - `project`
+   - `read:org`  
+   Save it as a repo secret named `GH_PAT`.  
+   In `.github/workflows/manual-import.yml`, set:
+   ```yaml
+   env:
+     GH_TOKEN: ${{ secrets.GH_PAT }}
+   ```
+   If using **@me** for a user project, `GITHUB_TOKEN` works without a PAT.
+
+---
+
+### **Every run**
+Go to **Actions → Manual Import → Run workflow**. Fill in:
+
+| Field           | Description                                                                 |
+|-----------------|-----------------------------------------------------------------------------|
+| **data_pattern** | Glob for your TSV/CSV. Default: `TSV_HERE/*.tsv`                           |
+| **project_owner**| `@me` (user project) or org name                                            |
+| **project_title**| Name of the project. Creates if not found, reuses if exists                 |
+| **run_labels**   | Whether to run label creation step (default: true)                          |
+| **run_issues**   | Whether to run issue creation step (default: true)                          |
+| **run_subissues**| Whether to run sub-issue creation step (default: true)                      |
+| **run_project**  | Whether to run project create/reuse step (default: true)                    |
+| **run_fields**   | Whether to run field creation step (default: true)                          |
+
+**Important:** If you turn off `run_project`, also turn off `run_fields` — fields need the project from the same run.
+
+---
+
+### **What you don’t need to enter**
+- **GH_REPO** — auto-set by the workflow
+- **PROJECT_NUMBER** — auto-detected from the created/reused project
+- **Script paths** — workflow handles them
+- **Auth during run** — handled via GH_TOKEN or GH_PAT
+
+---
+
+## 📌 Example
+
+Example run to import the latest `.tsv` from `TSV_HERE/` into a user project called "Imported Plan":
+
+1. Upload `plan.tsv` to `TSV_HERE/`
+2. Go to **Actions → Manual Import → Run workflow**
+3. Set:
+   ```
+   data_pattern: TSV_HERE/*.tsv
+   project_owner: @me
+   project_title: Imported Plan
+   ```
+4. Leave all toggles checked
+5. Click **Run workflow**
+
+---
+
+## 🔗 GitHub CLI Reference
+
+These scripts use [`gh`](https://cli.github.com/manual/) commands:
+- [`gh label create`](https://cli.github.com/manual/gh_label_create)
+- [`gh issue create`](https://cli.github.com/manual/gh_issue_create)
+- [`gh issue edit`](https://cli.github.com/manual/gh_issue_edit)
+- [`gh project create`](https://cli.github.com/manual/gh_project_create)
+- [`gh project item-create`](https://cli.github.com/manual/gh_project_item_create)
+- [`gh project field-create`](https://cli.github.com/manual/gh_project_field_create)
+- [`gh project option-create`](https://cli.github.com/manual/gh_project_option_create)
+- [`gh project item-edit`](https://cli.github.com/manual/gh_project_item_edit)
+
+All scripts auto-detect `.tsv` vs `.csv` and match columns by **case-insensitive substring** in header names.
+
+---
+
+
+
+---------
+
 # l4vISSUES-gpt5
 
 # GitHub Project Import (Scripts)
