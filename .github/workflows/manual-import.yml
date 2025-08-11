@@ -42,30 +42,34 @@ permissions:
   issues: write
   repository-projects: write
 
+# Global env & defaults for convenience
+env:
+  GH_REPO: ${{ github.repository }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}        # zero-edit auth; gh will auto-use this
+  PROJECT_OWNER: ${{ inputs.project_owner }}
+  PROJECT_TITLE: ${{ inputs.project_title }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   import:
     runs-on: ubuntu-latest
-    env:
-      GH_REPO: ${{ github.repository }}
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # zero-edit auth
-      PROJECT_OWNER: ${{ inputs.project_owner }}
-      PROJECT_TITLE: ${{ inputs.project_title }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Tools & auth
-        shell: bash
+      - name: Tools & auth (no login needed; GH_TOKEN in env)
         run: |
           set -euo pipefail
           gh --version
           jq --version
-          echo "$GH_TOKEN" | gh auth login --with-token
+          gh auth status -h github.com || true
 
       - name: Resolve data file from glob
         id: datafile
-        shell: bash
         run: |
           set -euo pipefail
           pattern='${{ inputs.data_pattern }}'
@@ -80,7 +84,6 @@ jobs:
           echo "data_file=$DATA_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Prepare scripts
-        shell: bash
         run: |
           set -euo pipefail
           chmod +x SCRIPTS/*.sh
@@ -88,25 +91,17 @@ jobs:
 
       - name: Labels
         if: ${{ inputs.run_labels }}
-        shell: bash
-        env:
-          GH_REPO: ${{ env.GH_REPO }}
         run: |
           bash SCRIPTS/aa-labels.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Issues
         if: ${{ inputs.run_issues }}
-        shell: bash
-        env:
-          GH_REPO: ${{ env.GH_REPO }}
         run: |
           bash SCRIPTS/ab-issues.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Sub-issues
         if: ${{ inputs.run_subissues }}
-        shell: bash
         env:
-          GH_REPO: ${{ env.GH_REPO }}
           PARENT_MAP: OUTPUTS/issue_map.tsv
         run: |
           bash SCRIPTS/ac-subissues.sh "${{ steps.datafile.outputs.data_file }}"
@@ -114,10 +109,7 @@ jobs:
       - name: Project (create/reuse + add items)
         if: ${{ inputs.run_project }}
         id: project
-        shell: bash
         env:
-          PROJECT_OWNER: ${{ env.PROJECT_OWNER }}
-          PROJECT_TITLE: ${{ env.PROJECT_TITLE }}
           PARENT_MAP: OUTPUTS/issue_map.tsv
           SUBMAP: OUTPUTS/subissue_map.tsv
         run: |
@@ -128,9 +120,7 @@ jobs:
 
       - name: Fields
         if: ${{ inputs.run_fields }}
-        shell: bash
         env:
-          PROJECT_OWNER: ${{ env.PROJECT_OWNER }}
           PROJECT_NUMBER: ${{ steps.project.outputs.project_number }}
           PARENT_MAP: OUTPUTS/issue_map.tsv
         run: |
