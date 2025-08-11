@@ -1,3 +1,60 @@
+# GitHub Project TSV Import Automation (Zero‑Edit)
+
+This repo lets you import Labels, Issues, Sub‑issues, a Project, and Project Fields from a TSV/CSV **without editing any files**. You run it entirely from **GitHub → Actions → Run workflow**.
+
+## 📂 Repo Layout
+```
+TSV_HERE/        # put your .tsv/.csv here
+SCRIPTS/         # the five Bash scripts (already location-agnostic)
+OUTPUTS/         # generated maps/outputs
+.github/workflows/manual-import.yml  # prewired manual workflow
+```
+
+## 🧠 How it works (no edits required)
+- Auth uses the built‑in **GITHUB_TOKEN** (auto‑injected by GitHub Actions).
+- The workflow takes three inputs at run time:
+  - `data_pattern` (glob, default `TSV_HERE/*.tsv`)
+  - `project_owner` (`@me` for a user project, or your org name)
+  - `project_title` (create or reuse)
+- Toggles let you enable/disable each step (defaults are all **on**).
+- Scripts discover columns by **case‑insensitive substring**:
+  - `*title*`, `*body*`, `*label*`, and `PROJECT_FIELD_*[:TYPE]`
+
+## ✅ One‑time repo setup (still zero edits)
+1) Ensure your TSV/CSV files live in `TSV_HERE/`.
+2) Confirm the workflow file exists at `.github/workflows/manual-import.yml`.
+3) Repo → **Settings → Actions → General → Workflow permissions** → set **Read and write permissions**.
+
+> Org projects: your org must allow `GITHUB_TOKEN` to write Projects. If it doesn’t, an org admin needs to enable that in org settings. You still don’t edit files here.
+
+## ▶️ Running it from GitHub Web (every time)
+1) Go to **Actions → Manual Import → Run workflow**.
+2) Fill the three inputs:
+   - **data_pattern**: keep default `TSV_HERE/*.tsv` (or adjust glob)
+   - **project_owner**: `@me` (user project) or your **org** name
+   - **project_title**: e.g., `Imported Plan`
+3) Leave all toggles on (or switch off what you don’t need).
+4) Click **Run workflow**.
+
+**That’s it.** No edits to scripts or YAML.
+
+## What the steps do
+1) **Labels (idempotent)** — creates only missing labels.
+2) **Issues (create‑only)** — creates issues; attaches all `*label*` columns; body passed verbatim via `--body-file`. Produces `OUTPUTS/issue_map.tsv`.
+3) **Sub‑issues (create‑only)** — splits parent body on `;`, creates child issues, links them back. Produces `OUTPUTS/subissue_map.tsv`.
+4) **Project (idempotent)** — creates or reuses project; adds all issue URLs; saves number to `OUTPUTS/project_number.txt`.
+5) **Fields (idempotent)** — creates fields/options if missing; applies values from `PROJECT_FIELD_*[:TYPE]`.
+
+## Notes
+- TSV recommended. CSV with complex quoting isn’t fully parsed by Bash’s simple splitter.
+- The workflow always picks the **latest modified** file matching your `data_pattern`.
+- No `LOCAL_ID` is needed; your primary label column is `ISSUE_LABEL_0` (and friends).
+
+
+--------------
+
+
+
 # GitHub Project TSV Import Automation
 
 This repository contains a **modular, multi-step import system** for creating GitHub Labels, Issues, Sub-issues, Projects, and Project Fields from a TSV or CSV file.
