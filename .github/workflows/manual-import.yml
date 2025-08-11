@@ -61,9 +61,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Init OUTPUTS
-        shell: bash
-        run: mkdir -p OUTPUTS && : > OUTPUTS/errors.md
 
       - name: Tools & auth (no login needed; GH_TOKEN in env)
         run: |
