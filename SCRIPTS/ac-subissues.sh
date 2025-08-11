@@ -69,7 +69,10 @@ TMPDIR="$(mktemp -d)"; trap 'rm -rf "$TMPDIR"' EXIT
 
 # Process rows
 while IFS= read -r line; do
-  IFS="$DELIM" read -r -a vals <<< "$(printf '%s' "$line" | tr -d '\r')"
+  mapfile -t vals < <(
+    printf '%s' "$line" | tr -d '\r' |
+    awk -v FS="$DELIM" '{for(i=1;i<=NF;i++) print $i}'
+  )
 
   ptitle="${vals[$TITLE_IDX]:-}"
   [[ -z "$ptitle" ]] && { echo "skip: empty parent title"; continue; }
