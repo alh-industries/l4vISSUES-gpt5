@@ -141,7 +141,7 @@ while IFS= read -r line; do
         gh project item-edit --id "$item_id" --field-name "$fname" --single-select "$val" >/dev/null
         ;;
       DATE)
-        gh project item-edit --id "$item_id" --field-name "$fname" --date "$val" >/devnull
+        gh project item-edit --id "$item_id" --field-name "$fname" --date "$val" >/dev/null
         ;;
       *)
         gh project item-edit --id "$item_id" --field-name "$fname" --text "$val" >/dev/null
