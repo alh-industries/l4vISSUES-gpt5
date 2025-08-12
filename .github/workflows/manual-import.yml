@@ -45,7 +45,7 @@ permissions:
 # Global env & defaults for convenience
 env:
   GH_REPO: ${{ github.repository }}
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}        # zero-edit auth; gh will auto-use this
+  GH_TOKEN: ${{ inputs.project_owner == '@me' && secrets.GH_PAT || secrets.GITHUB_TOKEN }}  # use PAT for @me projects
   PROJECT_OWNER: ${{ inputs.project_owner }}
   PROJECT_TITLE: ${{ inputs.project_title }}
 
