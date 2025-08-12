@@ -38,7 +38,7 @@ on:
         default: true
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   repository-projects: write
 
@@ -60,6 +60,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Tools & auth (no login needed; GH_TOKEN in env)
         run: |
@@ -125,3 +127,12 @@ jobs:
           PARENT_MAP: OUTPUTS/issue_map.tsv
         run: |
           bash SCRIPTS/ae-fields.sh "${{ steps.datafile.outputs.data_file }}"
+
+      - name: Commit outputs
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add OUTPUTS/*
+          git commit -m "Save workflow outputs" || echo "No changes"
+          git push
