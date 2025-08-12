@@ -36,6 +36,18 @@ on:
         description: Run project fields step
         type: boolean
         default: true
+      run_link_issues:
+        description: Run link issues step
+        type: boolean
+        default: false
+      link_parent:
+        description: Parent issue to link children under
+        type: string
+        required: false
+      link_children:
+        description: Child issues to link (space- or comma-delimited)
+        type: string
+        required: false
 
 permissions:
   contents: write
@@ -136,3 +148,24 @@ jobs:
           git add OUTPUTS/*
           git commit -m "Save workflow outputs" || echo "No changes"
           git push
+
+  link_issues:
+    if: ${{ inputs.run_link_issues }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare scripts
+        run: |
+          set -euo pipefail
+          chmod +x SCRIPTS/*.sh
+          mkdir -p OUTPUTS
+
+      - name: Link issues
+        run: |
+          bash SCRIPTS/af-link-only.sh \
+            "${{ inputs.link_parent }}" ${{ inputs.link_children }}
