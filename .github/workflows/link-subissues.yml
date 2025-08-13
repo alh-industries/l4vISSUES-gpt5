@@ -1,4 +1,4 @@
-name: Link sub-issues from task lists (scan all issues)
+name: Link sub-issues (scan all issues)
 
 on:
   workflow_dispatch: {}   # manual trigger, NO inputs
