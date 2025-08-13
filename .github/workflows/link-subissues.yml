@@ -17,6 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+      - name: Check gh CLI version
+        run: gh --version
+
       - name: Run scanner (all issues; no inputs)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # gh CLI uses this automatically
