@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "$0")/logging.sh"
 
 usage() {
   cat <<EOF

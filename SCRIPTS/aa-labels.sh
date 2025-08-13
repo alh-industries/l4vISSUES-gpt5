@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "$0")/logging.sh"
 
 usage() {
   cat <<EOF
@@ -76,7 +77,7 @@ for label in "${!NEED[@]}"; do
     echo "have: $label"
   else
     echo "create: $label"
-    gh "${GH_REPO_FLAG[@]}" label create "$label" || true
+    run_cmd gh "${GH_REPO_FLAG[@]}" label create "$label"
   fi
 done
 

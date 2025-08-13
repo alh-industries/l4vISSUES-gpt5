@@ -28,6 +28,10 @@ on:
         description: Run sub-issues step
         type: boolean
         default: true
+      run_link_issues:
+        description: Run link issues step
+        type: boolean
+        default: true        
       run_project:
         description: Run project step (create/reuse + add items)
         type: boolean
@@ -37,15 +41,24 @@ on:
         type: boolean
         default: true
 
+#      link_parent:
+#        description: Parent issue to link children under
+#        type: string
+#        required: false
+#      link_children:
+#        description: Child issues to link (space- or comma-delimited)
+#        type: string
+#        required: false
+
 permissions:
-  contents: read
+  contents: write
   issues: write
   repository-projects: write
 
 # Global env & defaults for convenience
 env:
   GH_REPO: ${{ github.repository }}
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}        # zero-edit auth; gh will auto-use this
+  GH_TOKEN: ${{ inputs.project_owner == '@me' && secrets.GH_PAT || secrets.GITHUB_TOKEN }}  # use PAT for @me projects
   PROJECT_OWNER: ${{ inputs.project_owner }}
   PROJECT_TITLE: ${{ inputs.project_title }}
 
@@ -60,6 +73,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Tools & auth (no login needed; GH_TOKEN in env)
         run: |
@@ -125,3 +140,33 @@ jobs:
           PARENT_MAP: OUTPUTS/issue_map.tsv
         run: |
           bash SCRIPTS/ae-fields.sh "${{ steps.datafile.outputs.data_file }}"
+
+      - name: Commit outputs
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add OUTPUTS/*
+          git commit -m "Save workflow outputs" || echo "No changes"
+          git push
+
+  link_issues:
+    if: ${{ inputs.run_link_issues }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare scripts
+        run: |
+          set -euo pipefail
+          chmod +x SCRIPTS/*.sh
+          mkdir -p OUTPUTS
+
+      - name: Link issues
+        run: |
+          bash SCRIPTS/af-link-only.sh \
+            "${{ inputs.link_parent }}" ${{ inputs.link_children }}

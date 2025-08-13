@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "$0")/logging.sh"
 
 usage() {
   cat <<EOF
@@ -89,7 +90,11 @@ while IFS= read -r line; do
   fi
 
   echo "create: $title"
-  url="$(gh "${GH_REPO_FLAG[@]}" issue create --title "$title" --body-file "$body_file" "${label_args[@]}")"
+  url="$(run_cmd gh "${GH_REPO_FLAG[@]}" issue create --title "$title" --body-file "$body_file" "${label_args[@]}")"
+  if [[ -z "$url" ]]; then
+    echo "warn: failed to create issue: $title (see OUTPUTS/errors.md)" >&2
+    continue
+  fi
   num="$(basename "$url")"
   printf "%s\t%s\t%s\n" "$title" "$url" "$num" >> "$MAP_OUT"
 

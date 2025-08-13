@@ -1,4 +1,5 @@
 #!/bin/bash
+source "$(dirname "$0")/logging.sh"
 # ===================================================================================
 #
 # DANGER: THIS SCRIPT DELETES REPOSITORY ISSUES AND/OR LABELS.
