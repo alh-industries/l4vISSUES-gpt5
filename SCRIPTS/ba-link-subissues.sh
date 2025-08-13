@@ -15,6 +15,12 @@
 
 set -Eeuo pipefail
 
+# rich trace with timestamps, line numbers, and the exact command that failed
+PS4='+ [${EPOCHREALTIME}] ${BASH_SOURCE##*/}:${LINENO}: ${FUNCNAME[0]:-main}: '
+set -x
+trap 'ec=$?; echo "::error file=${BASH_SOURCE[0]},line=${LINENO}::${BASH_COMMAND} (exit $ec)"; exit $ec' ERR
+
+
 # ------------ defaults (overridable via env or flags) -------------------------
 API_VER="${API_VER:-2022-11-28}"        # GitHub REST API version
 STATE="${STATE:-open}"                  # open|closed|all
