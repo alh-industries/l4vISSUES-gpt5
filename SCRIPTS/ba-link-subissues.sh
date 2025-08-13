@@ -253,7 +253,10 @@ process_parent() {
 
 # Enumerate parent issues (PRs excluded)
 scan_all_parents() {
-  local page=1 total=0
+  local page=1
+  local total=0
+  local n
+  local i
   while :; do
     mapfile -t nums < <(
       gh api -H "X-GitHub-Api-Version: ${API_VER}" \
