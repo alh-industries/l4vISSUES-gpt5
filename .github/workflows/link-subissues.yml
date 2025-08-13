@@ -35,7 +35,7 @@ jobs:
 
       - name: Run scanner (all issues; no inputs)
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}   # your PAT
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}   # custom PAT or default token
         shell: bash
         run: |
           set -euo pipefail
