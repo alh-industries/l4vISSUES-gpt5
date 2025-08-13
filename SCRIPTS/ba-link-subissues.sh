@@ -22,7 +22,7 @@ trap 'ec=$?; echo "::error file=${BASH_SOURCE[0]},line=${LINENO}::${BASH_COMMAND
 
 echo "gh version: $(gh --version 2>&1)"
 echo "gh auth status:"
-gh auth status || { echo "::error ::gh auth not ok" }
+gh auth status || { echo "::error ::gh auth not ok"; }
 
 echo "Current REST rate limit:"
 gh api rate_limit | jq -r '.resources.core | "limit=\(.limit) remaining=\(.remaining) reset=\(.reset)"' || true
