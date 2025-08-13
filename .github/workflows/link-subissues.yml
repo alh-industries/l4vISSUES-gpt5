@@ -1,11 +1,11 @@
 name: Link sub-issues (scan all issues)
 
 on:
-  workflow_dispatch: {}   # manual trigger, NO inputs
+  workflow_dispatch: {}   # manual trigger, no inputs
 
 permissions:
   contents: read
-  issues: write            # required to add sub-issues
+  issues: write           # required to add sub-issues
 
 concurrency:
   group: link-subissues-scanall
@@ -14,13 +14,26 @@ concurrency:
 jobs:
   scan_and_link:
     runs-on: ubuntu-latest
+    env:
+      # repo context for the script
+      GH_REPO: ${{ github.repository }}   # OWNER/REPO
+
+      # optional defaults (the script also has internal defaults)
+      API_VER: 2022-11-28
+      STATE: open                         # open|closed|all
+      REPLACE: "false"                    # "true" or "false"
+      DRYRUN: "false"                     # "true" to do a dry run
+      PAGE_SIZE: "100"
+      LOG_LEVEL: info                     # debug|info|warn|error
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Run scanner (all issues; no inputs)
+        # Use your PAT secret named GH_PAT; gh CLI reads GH_TOKEN
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # gh CLI uses this automatically
-          GH_REPO:  ${{ github.repository }}      # OWNER/REPO
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        shell: bash
         run: |
           set -euo pipefail
           bash SCRIPTS/ba-link-subissues.sh
