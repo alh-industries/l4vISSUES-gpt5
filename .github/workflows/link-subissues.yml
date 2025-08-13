@@ -15,24 +15,27 @@ jobs:
   scan_and_link:
     runs-on: ubuntu-latest
     env:
-      # repo context for the script
       GH_REPO: ${{ github.repository }}   # OWNER/REPO
-
-      # optional defaults (the script also has internal defaults)
       API_VER: 2022-11-28
-      STATE: open                         # open|closed|all
-      REPLACE: "false"                    # "true" or "false"
-      DRYRUN: "false"                     # "true" to do a dry run
+      STATE: open
+      REPLACE: "false"
+      DRYRUN: "false"
       PAGE_SIZE: "100"
-      LOG_LEVEL: info                     # debug|info|warn|error
+      LOG_LEVEL: info
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Preflight (check bytes and syntax)
+        shell: bash
+        run: |
+          awk 'END{print "script lines:",NR}' SCRIPTS/ba-link-subissues.sh
+          head -n 20 SCRIPTS/ba-link-subissues.sh | nl -ba
+          bash -n SCRIPTS/ba-link-subissues.sh
+
       - name: Run scanner (all issues; no inputs)
-        # Use your PAT secret named GH_PAT; gh CLI reads GH_TOKEN
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}   # your PAT
         shell: bash
         run: |
           set -euo pipefail
