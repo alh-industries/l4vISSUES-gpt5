@@ -268,6 +268,7 @@ scan_all_parents() {
 
 # --------------------------- main --------------------------------------------
 main() {
+  set -x
   need gh
   parse_args "$@"
   require_env
