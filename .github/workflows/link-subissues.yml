@@ -23,4 +23,4 @@ jobs:
           GH_REPO:  ${{ github.repository }}      # OWNER/REPO
         run: |
           set -euo pipefail
-          bash SCRIPTS/*link-subissues.sh
+          bash SCRIPTS/ba-link-subissues.sh
