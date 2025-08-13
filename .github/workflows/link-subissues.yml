@@ -35,6 +35,7 @@ jobs:
 
       - name: Run scanner (all issues; no inputs)
         env:
+          DRYRN: 'true'
           GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}   # custom PAT or default token
           GH_DEBUG: "1"                   # verbose GitHub CLI HTTP debug
         shell: bash
