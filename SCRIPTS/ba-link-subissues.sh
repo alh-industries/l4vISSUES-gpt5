@@ -291,6 +291,14 @@ main() {
   else
     scan_all_parents
   fi
+  # Dry-run path: emit a NOTICE annotation and succeed.
+  if [[ "${DRYRUN,,}" == "true" ]]; then
+  # Try to show the count if your scan code set one
+    _count="${PARENT_COUNT:-${parents_processed:-unknown}}"
+    echo "::notice file=${BASH_SOURCE[0]},line=$LINENO,title=Dry-run::Scan complete. Parents processed: ${_count}"
+    exit 0
+  fi
+
 }
 
 main "$@"
