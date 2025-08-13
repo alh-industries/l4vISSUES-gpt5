@@ -20,6 +20,13 @@ PS4='+ [${EPOCHREALTIME}] ${BASH_SOURCE##*/}:${LINENO}: ${FUNCNAME[0]:-main}: '
 set -x
 trap 'ec=$?; echo "::error file=${BASH_SOURCE[0]},line=${LINENO}::${BASH_COMMAND} (exit $ec)"; exit $ec' ERR
 
+echo "gh version: $(gh --version 2>&1)"
+echo "gh auth status:"
+gh auth status || { echo "::error ::gh auth not ok" }
+
+echo "Current REST rate limit:"
+gh api rate_limit | jq -r '.resources.core | "limit=\(.limit) remaining=\(.remaining) reset=\(.reset)"' || true
+
 
 # ------------ defaults (overridable via env or flags) -------------------------
 API_VER="${API_VER:-2022-11-28}"        # GitHub REST API version
