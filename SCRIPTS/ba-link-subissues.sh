@@ -166,8 +166,8 @@ link_child_formal() {
     -H "Accept: application/vnd.github+json" \
     -H "X-GitHub-Api-Version: ${API_VER}" \
     "/repos/${GH_REPO}/issues/${parent_num}/sub_issues" \
-    -f sub_issue_id="$child_id" \
-    -f replace_parent="$REPLACE" >/dev/null
+    -F sub_issue_id="$child_id" \
+    -F replace_parent="$REPLACE" >/dev/null
 }
 
 # Process a single parent issue
@@ -234,7 +234,7 @@ process_parent() {
       continue
     fi
     if link_child_formal "$pnum" "$cid"; then
-      ((linked++))
+      ((++linked))
       # update EXIST set to avoid duplicates in same run
       EXIST["${child_owner}/${child_repo}#${child_num}"]=1
       # be gentle to API
@@ -266,7 +266,7 @@ scan_all_parents() {
     (( ${#nums[@]} )) || break
     for (( i=0; i<${#nums[@]}; i++ )); do
       n="${nums[$i]}"
-      ((total++))
+      ((++total))
       process_parent "$n"
     done
     ((page++))
