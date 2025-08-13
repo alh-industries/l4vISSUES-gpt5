@@ -1,0 +1,26 @@
+name: Link sub-issues from task lists (scan all issues)
+
+on:
+  workflow_dispatch: {}   # manual trigger, NO inputs
+
+permissions:
+  contents: read
+  issues: write            # required to add sub-issues
+
+concurrency:
+  group: link-subissues-scanall
+  cancel-in-progress: true
+
+jobs:
+  scan_and_link:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run scanner (all issues; no inputs)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # gh CLI uses this automatically
+          GH_REPO:  ${{ github.repository }}      # OWNER/REPO
+        run: |
+          set -euo pipefail
+          bash SCRIPTS/*link-subissues.sh
