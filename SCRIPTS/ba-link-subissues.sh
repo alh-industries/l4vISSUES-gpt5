@@ -242,11 +242,19 @@ process_parent() {
 scan_all_parents() {
   local page=1 total=0
   while :; do
-    mapfile -t nums < <(
-      gh api -H "X-GitHub-Api-Version: ${API_VER}" \
+    log debug "Scanning for parent issues, page ${page}..."
+    local api_out
+    if ! api_out=$(gh api -H "X-GitHub-Api-Version: ${API_VER}" \
         "/repos/${GH_REPO}/issues?state=${STATE}&per_page=${PAGE_SIZE}&page=${page}" \
-        --jq '.[] | select(.pull_request|not) | .number' 2>/dev/null || true
-    )
+        --jq '.[] | select(.pull_request|not) | .number' 2>&1); then
+      log error "gh api call to list issues failed. Output:"
+      log error "$api_out"
+      exit 4
+    fi
+
+    mapfile -t nums < <(printf '%s' "$api_out")
+    log debug "Found ${#nums[@]} potential parent issues on page ${page}."
+
     (( ${#nums[@]} )) || break
     for n in "${nums[@]}"; do
       ((total++))
