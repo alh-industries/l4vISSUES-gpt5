@@ -36,7 +36,31 @@ jobs:
       - name: Run scanner (all issues; no inputs)
         env:
           GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}   # custom PAT or default token
-        shell: bash
-        run: |
-          set -euo pipefail
-          bash SCRIPTS/ba-link-subissues.sh
+ #       shell: bash
+ #       run: |
+ #         set -euo pipefail
+#          bash SCRIPTS/ba-link-subissues.sh
+
+#- name: Run scanner (all issues; no inputs)
+#  env:
+#    GH_TOKEN: ${{ github.token }}   # same token you were already using
+    GH_DEBUG: "1"                   # verbose GitHub CLI HTTP debug
+  run: |
+    # Strict mode stays the same
+    set -euo pipefail
+
+    # === requested debug harness (trace + ERR trap) ===
+    PS4='+ [${EPOCHREALTIME}] ${BASH_SOURCE##*/}:${LINENO}: ${FUNCNAME[0]:-main}: '
+    set -x
+    trap 'ec=$?; echo "::error file=${BASH_SOURCE[0]},line=${LINENO}::${BASH_COMMAND} (exit $ec)"; exit $ec' ERR
+
+    # === requested GH CLI visibility ===
+    echo "gh version: $(gh --version 2>&1)"
+    echo "gh auth status:"
+    gh auth status
+
+    echo "rate_limit (raw):"
+    gh api rate_limit || true
+
+    # === original script ===
+    bash SCRIPTS/ba-link-subissues.sh
