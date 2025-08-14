@@ -25,10 +25,10 @@ on:
         type: boolean
         default: true
       run_subissues:
-        description: Run sub-issues step
+        description: deconcat body into subissues checklist
         type: boolean
         default: true
-      run_link_issues:
+      run_link_subissues:
         description: Run link issues step
         type: boolean
         default: true        
@@ -168,5 +168,4 @@ jobs:
 
       - name: Link issues
         run: |
-          bash SCRIPTS/af-link-only.sh \
-            "${{ inputs.link_parent }}" ${{ inputs.link_children }}
+          bash SCRIPTS/ba-link-subissusa.sh
