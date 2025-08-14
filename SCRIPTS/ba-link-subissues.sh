@@ -15,6 +15,19 @@
 
 set -Eeuo pipefail
 
+# rich trace with timestamps, line numbers, and the exact command that failed
+PS4='+ [${EPOCHREALTIME}] ${BASH_SOURCE##*/}:${LINENO}: ${FUNCNAME[0]:-main}: '
+set -x
+trap 'ec=$?; echo "::error file=${BASH_SOURCE[0]},line=${LINENO}::${BASH_COMMAND} (exit $ec)"; exit $ec' ERR
+
+echo "gh version: $(gh --version 2>&1)"
+echo "gh auth status:"
+gh auth status || { echo "::error ::gh auth not ok"; }
+
+echo "Current REST rate limit:"
+gh api rate_limit | jq -r '.resources.core | "limit=\(.limit) remaining=\(.remaining) reset=\(.reset)"' || true
+
+
 # ------------ defaults (overridable via env or flags) -------------------------
 API_VER="${API_VER:-2022-11-28}"        # GitHub REST API version
 STATE="${STATE:-open}"                  # open|closed|all
@@ -153,8 +166,8 @@ link_child_formal() {
     -H "Accept: application/vnd.github+json" \
     -H "X-GitHub-Api-Version: ${API_VER}" \
     "/repos/${GH_REPO}/issues/${parent_num}/sub_issues" \
-    -f sub_issue_id="$child_id" \
-    -f replace_parent="$REPLACE" >/dev/null
+    -F sub_issue_id="$child_id" \
+    -F replace_parent="$REPLACE" >/dev/null
 }
 
 # Process a single parent issue
@@ -221,7 +234,7 @@ process_parent() {
       continue
     fi
     if link_child_formal "$pnum" "$cid"; then
-      ((linked++))
+      ((++linked))
       # update EXIST set to avoid duplicates in same run
       EXIST["${child_owner}/${child_repo}#${child_num}"]=1
       # be gentle to API
@@ -240,7 +253,10 @@ process_parent() {
 
 # Enumerate parent issues (PRs excluded)
 scan_all_parents() {
-  local page=1 total=0
+  local page=1
+  local total=0
+  local n
+  local i
   while :; do
     mapfile -t nums < <(
       gh api -H "X-GitHub-Api-Version: ${API_VER}" \
@@ -248,8 +264,9 @@ scan_all_parents() {
         --jq '.[] | select(.pull_request|not) | .number' 2>/dev/null || true
     )
     (( ${#nums[@]} )) || break
-    for n in "${nums[@]}"; do
-      ((total++))
+    for (( i=0; i<${#nums[@]}; i++ )); do
+      n="${nums[$i]}"
+      ((++total))
       process_parent "$n"
     done
     ((page++))
@@ -274,6 +291,14 @@ main() {
   else
     scan_all_parents
   fi
+  # Dry-run path: emit a NOTICE annotation and succeed.
+  if [[ "${DRYRUN,,}" == "true" ]]; then
+  # Try to show the count if your scan code set one
+    _count="${PARENT_COUNT:-${parents_processed:-unknown}}"
+    echo "::notice file=${BASH_SOURCE[0]},line=$LINENO,title=Dry-run::Scan complete. Parents processed: ${_count}"
+    exit 0
+  fi
+
 }
 
 main "$@"
