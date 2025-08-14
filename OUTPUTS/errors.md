@@ -600,3 +600,5 @@ label with name "ID:136" already exists; use `--force` to update its color and d
 label with name "ID:137" already exists; use `--force` to update its color and description
 [2025-08-14 08:21:18] SCRIPTS/ac-subissues.sh: line 100: exit 1: gh "${GH_REPO_FLAG[@]}" issue create --title "$st" --body "" "${label_args[@]}"
 [2025-08-14 08:21:18] SCRIPTS/ac-subissues.sh: line 100: exit 1: curl="$(gh "${GH_REPO_FLAG[@]}" issue create --title "$st" --body "" "${label_args[@]}")"
+[2025-08-14 09:22:03] SCRIPTS/ad-project.sh: line 38: exit 1: head -n1
+[2025-08-14 09:22:03] SCRIPTS/ad-project.sh: line 38: exit 1: proj_num=$(gh project list --owner "$PROJECT_OWNER" --format json | jq -r --arg t "$PROJECT_TITLE" '.projects[] | select(.title==$t) | .number' | head -n1)
