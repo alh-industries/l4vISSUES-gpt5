@@ -7,6 +7,15 @@ ERROR_LOG_FILE="$script_dir/../OUTPUTS/errors.md"
 mkdir -p "$(dirname "$ERROR_LOG_FILE")"
 touch "$ERROR_LOG_FILE"
 
+# Add a separator to the error log at the beginning of each run
+printf -- '---\n' >> "$ERROR_LOG_FILE"
+
+log_info() {
+    printf -- '[%s] [INFO] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >> "$INFO_LOG_FILE"
+    printf '\n' >> "$INFO_LOG_FILE"
+
+}
+
 log_error() {
   local exit_code="$1"
   local line="$2"
@@ -15,6 +24,7 @@ log_error() {
   {
     printf -- '- [%s] %s: line %s: exit %s: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$0" "$line" "$exit_code" "$cmd"
     [[ -n "$err" ]] && printf '%s\n' "$err"
+    printf '\n'
   } >> "$ERROR_LOG_FILE"
   return 0
 }
