@@ -18,7 +18,7 @@ on:
         default: TSV_HERE/*.tsv
         required: true
       project_owner:
-        description: Project owner: @me, @org, or repo owner (default)
+        description: Project owner (@me, <org-name>, or repo owner (default))
         default: ${{ github.repository_owner }}
         required: true
       project_title:
