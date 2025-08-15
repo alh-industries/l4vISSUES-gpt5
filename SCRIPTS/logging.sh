@@ -11,9 +11,7 @@ touch "$ERROR_LOG_FILE"
 printf -- '---\n' >> "$ERROR_LOG_FILE"
 
 log_info() {
-    printf -- '[%s] [INFO] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >> "$INFO_LOG_FILE"
-    printf '\n' >> "$INFO_LOG_FILE"
-
+    printf -- '[%s] [INFO] %s\n\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >> "$INFO_LOG_FILE"
 }
 
 log_error() {
