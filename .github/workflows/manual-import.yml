@@ -3,6 +3,8 @@ name: Manual Import v3
 
 on:
   workflow_dispatch:
+  
+  # workflow gui menu:
     inputs:
       data_pattern:
         description: userTSV/CSV (uses last modified)
@@ -16,10 +18,14 @@ on:
         description: Project title (create or reuse); case-sensitive
         default: ProjectName
         required: true
+  
+    # scripts start:  
       run_labels:
-        description: run aa-labels; read:userTSV
+        description: Run aa-labels.sh; (in:userTSV; out:(none))
         type: boolean
         default: true
+        # The script `aa-labels.sh` consumes the `userTSV` file by reading all columns with "label" in the header to compile a unique list of all label names that need to exist in the repository.
+
       run_issues:
         description: Run ab-issues; read:userTSV write:issue_map.tsv
         type: boolean
