@@ -100,7 +100,13 @@ ensure_field(){
   if [[ "$type" == "SINGLE_SELECT" ]]; then
     # For single select, we need to gather all possible options from the data file first.
     local options_string
-    options_string=$(cut -d "$DELIM" -f $((PF_IDXS[j]+1)) < "$DATA_FILE" | tail -n +2 | sort -u | paste -sd "," -)
+    options_string=$(
+      cut -d "$DELIM" -f $((PF_IDXS[j]+1)) < "$DATA_FILE" |
+      tail -n +2 |
+      awk 'NF' |
+      sort -u |
+      paste -sd "," -
+    )
     gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" --single-select-options "$options_string" >/dev/null
   else
     gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" >/dev/null
