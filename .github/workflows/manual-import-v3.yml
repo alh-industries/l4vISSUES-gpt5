@@ -1,7 +1,7 @@
 # .github/workflows/manual-import-v3.yml
 #
 # -- CHANGELOG --
-# v3: added changelog 
+# v3: added changelog
 # v3: added gui in/out string
 # v3: added script description
 
@@ -10,7 +10,7 @@ name: Manual Import v3
 
 on:
   workflow_dispatch:
-  
+
   # workflow gui menu:
     inputs:
       data_pattern:
@@ -25,37 +25,41 @@ on:
         description: GH Project name (new or old; case-sensitive)
         default: ProjectName
         required: true
-  
-    # scripts startG :  
+
+    # scripts startG :
+      run_all:
+        description: Run all scripts (overrides individual toggles)
+        type: boolean
+        default: false
       run_labels:
         description: Run aa-labels.sh; (in:userTSV; out:(none))
         type: boolean
-        default: true
+        default: false
         # The script `aa-labels.sh` consumes the `userTSV` file by reading all columns with "label" in the header to compile a unique list of all label names that need to exist in the repository.
       run_issues:
         description: Run ab-issues.sh; (in:userTSV; out:issue_map.tsv)
         type: boolean
-        default: true
+        default: false
         # The script `ab-issues.sh` consumes the `userTSV` file row by row to create a new GitHub issue from the "title", "body", and "label" columns.
       run_subissues:
         description: Run ac-subissues.sh; (in:userTSV, issue_map.tsv; out:subissue_map.tsv)
         type: boolean
-        default: true
+        default: false
         # The script `ac-subissues.sh` consumes the `userTSV` to create sub-issue titles and `issue_map.tsv` to link them to the correct parent issue.
       run_link_subissues:
         description: Run ba-link-subissues.sh; (in:(none); out:(none))
         type: boolean
-        default: true        
+        default: false
         # The script `ba-link-subissues.sh` consumes no local files; it scans repository issues via API to link task-list items to parent issues.
       run_project:
         description: Run ad-project.sh; (in:issue_map.tsv, subissue_map.tsv; out:project_number.txt)
         type: boolean
-        default: true
+        default: false
         # The script `ad-project.sh` consumes both `issue_map.tsv` and `subissue_map.tsv` to add all created issues as items to the project.
       run_fields:
         description: Run ae-fields.sh; (in:userTSV, issue_map.tsv, project_number.txt; out:(none))
         type: boolean
-        default: true
+        default: false
         # The script `ae-fields.sh` consumes the `userTSV` for field values, `issue_map.tsv` to identify items, and `project_number.txt` to target the correct project.
 
 permissions:
@@ -78,7 +82,7 @@ jobs:
       PARENT_MAP: OUTPUTS/issue_map.tsv
       SUBMAP: OUTPUTS/subissue_map.tsv
 
-    steps:         
+    steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -113,23 +117,23 @@ jobs:
           mkdir -p OUTPUTS
 
       - name: Labels
-        if: ${{ inputs.run_labels }}
+        if: ${{ inputs.run_all || inputs.run_labels }}
         run: bash SCRIPTS/aa-labels.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Issues
-        if: ${{ inputs.run_issues }}
+        if: ${{ inputs.run_all || inputs.run_issues }}
         run: bash SCRIPTS/ab-issues.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Sub-issues
-        if: ${{ inputs.run_subissues }}
+        if: ${{ inputs.run_all || inputs.run_subissues }}
         run: bash SCRIPTS/ac-subissues.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: link subissues
-        if: ${{ inputs.run_link_subissues }}
+        if: ${{ inputs.run_all || inputs.run_link_subissues }}
         run: bash SCRIPTS/ba-link-subissues.sh
-        
+
       - name: Project (create/reuse + add items)
-        if: ${{ inputs.run_project }}
+        if: ${{ inputs.run_all || inputs.run_project }}
         id: project
         run: |
           set -euo pipefail
@@ -138,7 +142,7 @@ jobs:
           echo "project_number=$(cat OUTPUTS/project_number.txt)" >> "$GITHUB_OUTPUT"
 
       - name: Fields
-        if: ${{ inputs.run_fields }}
+        if: ${{ inputs.run_all || inputs.run_fields }}
         run: bash SCRIPTS/ae-fields.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Commit outputs
@@ -149,4 +153,3 @@ jobs:
           git add OUTPUTS || true
           git commit -m "Save workflow outputs" || echo "No changes"
           git push
-
