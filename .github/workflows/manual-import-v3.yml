@@ -18,9 +18,9 @@ on:
         default: TSV_HERE/*.tsv
         required: true
       project_owner:
-        description: Project owner (@me, <org-name>, or repo owner (default))
-        default: ${{ github.repository_owner }}
-        required: true
+        description: Project owner (@me, <org-name>, blank for repo owner)
+        default: ""
+        required: false
       project_title:
         description: GH Project name (new or old; case-sensitive)
         default: ProjectName
@@ -58,7 +58,6 @@ on:
         default: true
         # The script `ae-fields.sh` consumes the `userTSV` for field values, `issue_map.tsv` to identify items, and `project_number.txt` to target the correct project.
 
-
 permissions:
   contents: write
   issues: write
@@ -68,10 +67,14 @@ permissions:
 # Global env & defaults for convenience
 env:
   GH_REPO: ${{ github.repository }}
-  GH_TOKEN: ${{ inputs.project_owner == '@me' && secrets.GH_PAT || secrets.GITHUB_TOKEN }}  # use PAT for @me projects
-  PROJECT_OWNER: ${{ inputs.project_owner }}
+  GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}  
+  PROJECT_OWNER: ${{ inputs.project_owner || github.repository_owner }}
   PROJECT_TITLE: ${{ inputs.project_title }}
+  PARENT_MAP: OUTPUTS/issue_map.tsv
+  SUBMAP: OUTPUTS/subissue_map.tsv
+  PROJECT_NUMBER: ${{ steps.project.outputs.project_number }}
 
+  
 defaults:
   run:
     shell: bash
@@ -80,7 +83,7 @@ jobs:
   import:
     runs-on: ubuntu-latest
 
-    steps:
+    steps:         
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -116,20 +119,15 @@ jobs:
 
       - name: Labels
         if: ${{ inputs.run_labels }}
-        run: |
-          bash SCRIPTS/aa-labels.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/aa-labels.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Issues
         if: ${{ inputs.run_issues }}
-        run: |
-          bash SCRIPTS/ab-issues.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/ab-issues.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Sub-issues
         if: ${{ inputs.run_subissues }}
-        env:
-          PARENT_MAP: OUTPUTS/issue_map.tsv
-        run: |
-          bash SCRIPTS/ac-subissues.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/ac-subissues.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: link subissues
         if: ${{ inputs.run_link_subissues }}
@@ -138,9 +136,6 @@ jobs:
       - name: Project (create/reuse + add items)
         if: ${{ inputs.run_project }}
         id: project
-        env:
-          PARENT_MAP: OUTPUTS/issue_map.tsv
-          SUBMAP: OUTPUTS/subissue_map.tsv
         run: |
           set -euo pipefail
           bash SCRIPTS/ad-project.sh
@@ -149,11 +144,7 @@ jobs:
 
       - name: Fields
         if: ${{ inputs.run_fields }}
-        env:
-          PROJECT_NUMBER: ${{ steps.project.outputs.project_number }}
-          PARENT_MAP: OUTPUTS/issue_map.tsv
-        run: |
-          bash SCRIPTS/ae-fields.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/ae-fields.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Commit outputs
         if: always()
