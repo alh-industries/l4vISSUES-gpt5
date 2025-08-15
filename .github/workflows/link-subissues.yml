@@ -1,11 +1,38 @@
 name: Link sub-issues (scan all issues)
+run-name: >-
+  Link sub-issues • dryrun=${{ inputs.dryrun }}
+  • replace=${{ inputs.replace }}
+  • state=${{ inputs.state }}
+  • parent=${{ inputs.parent_issue || 'all' }}
 
 on:
-  workflow_dispatch: {}   # manual trigger, no inputs
+  workflow_dispatch:
+    inputs:
+      dryrun:
+        type: boolean
+        description: "Plan only (no writes). Script stays green with NOTICE."
+        default: false
+      replace:
+        type: boolean
+        description: "Allow moving a child from an existing parent."
+        default: false
+      state:
+        type: choice
+        description: "Which parent issues to scan"
+        options: [open, all]
+        default: all
+      parent_issue:
+        type: string
+        description: "Scan a single parent issue number (optional)."
+        required: false
+      debug:
+        type: boolean
+        description: "Verbose GH CLI + bash trace"
+        default: true
 
 permissions:
   contents: read
-  issues: write           # required to add sub-issues
+  issues: write
 
 concurrency:
   group: link-subissues-scanall
@@ -14,12 +41,15 @@ concurrency:
 jobs:
   scan_and_link:
     runs-on: ubuntu-latest
+
     env:
-      GH_REPO: ${{ github.repository }}   # OWNER/REPO
+      # Repo/API + script knobs
+      GH_REPO: ${{ github.repository }}
       API_VER: 2022-11-28
-      STATE: open
-      REPLACE: "false"
-      DRYRUN: "false"
+      STATE: ${{ inputs.state || 'all' }}
+      REPLACE: ${{ inputs.replace }}
+      DRYRUN: ${{ inputs.dryrun }}
+      PARENT_ISSUE: ${{ inputs.parent_issue }}
       PAGE_SIZE: "100"
       LOG_LEVEL: info
 
@@ -33,28 +63,20 @@ jobs:
           head -n 20 SCRIPTS/ba-link-subissues.sh | nl -ba
           bash -n SCRIPTS/ba-link-subissues.sh
 
-      - name: Run scanner (all issues; no inputs)
+      - name: Run scanner
         env:
-          DRYRUN: 'true'
-          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}   # custom PAT or default token
-          GH_DEBUG: "1"                   # verbose GitHub CLI HTTP debug
+          GH_TOKEN: ${{ secrets.GH_PAT || github.token }}      # PAT fallback -> built-in token
+          GH_DEBUG: ${{ inputs.debug && '1' || '0' }}
         shell: bash
         run: |
-          # Strict mode stays the same
           set -euo pipefail
-
-          # === requested debug harness (trace + ERR trap) ===
           PS4='+ [${EPOCHREALTIME}] ${BASH_SOURCE##*/}:${LINENO}: ${FUNCNAME[0]:-main}: '
-          set -x
+          if [[ "${GH_DEBUG}" == "1" ]]; then set -x; fi
           trap 'ec=$?; echo "::error file=${BASH_SOURCE[0]},line=${LINENO}::${BASH_COMMAND} (exit $ec)"; exit $ec' ERR
 
-          # === requested GH CLI visibility ===
           echo "gh version: $(gh --version 2>&1)"
-          echo "gh auth status:"
-          gh auth status
+          echo "gh auth status:"; gh auth status || true
+          if [[ "${GH_DEBUG}" == "1" ]]; then echo "rate_limit (raw):"; gh api rate_limit || true; fi
 
-          echo "rate_limit (raw):"
-          gh api rate_limit || true
-
-          # === original script ===
+          # Your script (emits NOTICE + exit 0 on dry-run; writes on DRYRUN=false)
           bash SCRIPTS/ba-link-subissues.sh

@@ -50,7 +50,8 @@ gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json > "$ITE
 
 while read -r url id; do
   [[ -n "$url" && -n "$id" ]] && URL2ITEM["$url"]="$id"
-done < <(jq -r '.items[]? | select(.content != null) | "\(.content.url) \(.id)"' "$ITEMS_JSON")
+done < <(jq -r '.items.nodes[]? | select(.content.url != null) | "\(.content.url) \(.id)"' "$ITEMS_JSON")
+
 
 # Ensure an issue URL exists in the project; return item id (idempotent)
 ensure_item () {
@@ -60,7 +61,7 @@ ensure_item () {
     gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "$url" >/dev/null
     # refresh map minimally to fetch this item's id
     gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json > "$ITEMS_JSON"
-    id="$(jq -r --arg u "$url" '.items[]? | select(.content != null and .content.url==$u) | .id' "$ITEMS_JSON" | head -n1)"
+    id="$(jq -r --arg u "$url" '.items.nodes[]? | select(.content != null and .content.url==$u) | .id' "$ITEMS_JSON" | head -n1)"
     [[ -n "$id" ]] && URL2ITEM["$url"]="$id"
   fi
   printf '%s' "$id"
@@ -93,24 +94,24 @@ gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json >
 
 ensure_field(){
   local name="$1" type="$2"
+  local j="$3"
   jq -e --arg n "$name" '.fields[] | select(.name==$n)' "$FIELDS_JSON" >/dev/null && return 0
   echo "create field: $name ($type)"
-  gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" >/dev/null
-  gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json > "$FIELDS_JSON"
-}
-ensure_option(){
-  local name="$1" opt="$2"
-  [[ -n "$opt" ]] || return 0
-  jq -e --arg n "$name" --arg o "$opt" '.fields[] | select(.name==$n) | .options[]? | select(.name==$o)' "$FIELDS_JSON" >/dev/null && return 0
-  echo "add option: $name -> $opt"
-  gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type SINGLE_SELECT --single-select-options "$opt" >/dev/null
+  if [[ "$type" == "SINGLE_SELECT" ]]; then
+    # For single select, we need to gather all possible options from the data file first.
+    local options_string
+    options_string=$(cut -d "$DELIM" -f $((PF_IDXS[j]+1)) < "$DATA_FILE" | tail -n +2 | sort -u | paste -sd "," -)
+    gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" --single-select-options "$options_string" >/dev/null
+  else
+    gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" >/dev/null
+  fi
   gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json > "$FIELDS_JSON"
 }
 
-# ---- Ensure fields/options exist (idempotent) ----
+# ---- Ensure fields exist (idempotent) ----
 for j in "${!PF_IDXS[@]}"; do
   fname="${PF_NAMES[$j]}"; ftype="${PF_TYPES[$j]}"
-  ensure_field "$fname" "$ftype"
+  ensure_field "$fname" "$ftype" "$j"
 done
 
 # ---- Build Title -> URL from parent map ----
@@ -141,8 +142,7 @@ while IFS= read -r line; do
 
     case "$ftype" in
       SINGLE_SELECT)
-        ensure_option "$fname" "$val"
-        gh project item-edit --id "$item_id" --field-name "$fname" --single-select "$val" >/dev/null
+        gh project item-edit --id "$item_id" --field-name "$fname" --single-select-option-name "$val" >/dev/null
         ;;
       DATE)
         gh project item-edit --id "$item_id" --field-name "$fname" --date "$val" >/dev/null

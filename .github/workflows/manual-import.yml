@@ -1,5 +1,5 @@
 # .github/workflows/manual-import.yml
-name: Manual Import (Zero-Edit)
+name: Manual Import v2
 
 on:
   workflow_dispatch:
@@ -25,30 +25,21 @@ on:
         type: boolean
         default: true
       run_subissues:
-        description: Run sub-issues step
+        description: deconcat issue_body into subissues checklist
         type: boolean
         default: true
-      run_link_issues:
-        description: Run link issues step
+      run_link_subissues:
+        description: link subissues to parent 
         type: boolean
         default: true        
       run_project:
-        description: Run project step (create/reuse + add items)
+        description: create/reuse Project + add issues
         type: boolean
         default: true
       run_fields:
         description: Run project fields step
         type: boolean
         default: true
-
-#      link_parent:
-#        description: Parent issue to link children under
-#        type: string
-#        required: false
-#      link_children:
-#        description: Child issues to link (space- or comma-delimited)
-#        type: string
-#        required: false
 
 permissions:
   contents: write
@@ -121,6 +112,10 @@ jobs:
         run: |
           bash SCRIPTS/ac-subissues.sh "${{ steps.datafile.outputs.data_file }}"
 
+      - name: link subissues
+        if: ${{ inputs.run_link_subissues }}
+        run: bash SCRIPTS/ba-link-subissues.sh
+        
       - name: Project (create/reuse + add items)
         if: ${{ inputs.run_project }}
         id: project
@@ -150,23 +145,3 @@ jobs:
           git commit -m "Save workflow outputs" || echo "No changes"
           git push
 
-  link_issues:
-    if: ${{ inputs.run_link_issues }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Prepare scripts
-        run: |
-          set -euo pipefail
-          chmod +x SCRIPTS/*.sh
-          mkdir -p OUTPUTS
-
-      - name: Link issues
-        run: |
-          bash SCRIPTS/af-link-only.sh \
-            "${{ inputs.link_parent }}" ${{ inputs.link_children }}

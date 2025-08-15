@@ -14,6 +14,8 @@
 #  4 API error (hard failure; most per-issue errors are soft and logged)
 
 set -Eeuo pipefail
+source "$(dirname "$0")/logging.sh"
+
 
 # rich trace with timestamps, line numbers, and the exact command that failed
 PS4='+ [${EPOCHREALTIME}] ${BASH_SOURCE##*/}:${LINENO}: ${FUNCNAME[0]:-main}: '
