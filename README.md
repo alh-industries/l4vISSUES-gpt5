@@ -42,7 +42,7 @@ OUTPUTS/         # generated maps/outputs
 1) **Labels (idempotent)** — creates only missing labels.
 2) **Issues (create‑only)** — creates issues; attaches all `*label*` columns; body passed verbatim via `--body-file`. Produces `OUTPUTS/issue_map.tsv`.
 3) **Sub‑issues (create‑only)** — splits parent body on `;`, creates child issues, links them back. Produces `OUTPUTS/subissue_map.tsv`.
-4) **Project (idempotent)** — creates or reuses project; adds all issue URLs; saves number to `OUTPUTS/project_number.txt`.
+4) **Project (idempotent)** — creates or reuses project; links the repository (if `GH_REPO` set); adds all issue URLs; saves number to `OUTPUTS/project_number.txt`.
 5) **Fields (idempotent)** — creates fields/options if missing; applies values from `PROJECT_FIELD_*[:TYPE]`.
 
 ## Notes
@@ -95,9 +95,10 @@ Order of operation (alphabetical naming keeps them in sequence):
    - Assigns labels and links to parent issues  
    - **No idempotency**  
 
-4. **ad-project.sh**  
-   - Creates or reuses a GitHub Project  
-   - Adds all issues and sub-issues to the project  
+4. **ad-project.sh**
+   - Creates or reuses a GitHub Project
+   - Links the project to `GH_REPO` when provided
+   - Adds all issues and sub-issues to the project
    - Saves project number to `OUTPUTS/project_number.txt`
 
 5. **ae-fields.sh**  
