@@ -13,7 +13,7 @@ log_error() {
   local cmd="$3"
   local err="${4:-}"
   {
-    printf '[%s] %s: line %s: exit %s: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$0" "$line" "$exit_code" "$cmd"
+    printf -- '- [%s] %s: line %s: exit %s: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$0" "$line" "$exit_code" "$cmd"
     [[ -n "$err" ]] && printf '%s\n' "$err"
   } >> "$ERROR_LOG_FILE"
   return 0
