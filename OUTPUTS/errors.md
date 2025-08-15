@@ -1,8 +1,8 @@
-[2025-08-14 06:49:13] SCRIPTS/aa-labels.sh: line 80: exit 0: gh --repo alh-industries/l4vISSUES-gpt5 label create ID:59
+- [2025-08-14 06:49:13] SCRIPTS/aa-labels.sh: line 80: exit 0: gh --repo alh-industries/l4vISSUES-gpt5 label create ID:59
 label with name "ID:59" already exists; use `--force` to update its color and description
-[2025-08-14 06:49:13] SCRIPTS/aa-labels.sh: line 80: exit 0: gh --repo alh-industries/l4vISSUES-gpt5 label create bucket: MAJOR TASKS
+- [2025-08-14 06:49:13] SCRIPTS/aa-labels.sh: line 80: exit 0: gh --repo alh-industries/l4vISSUES-gpt5 label create bucket: MAJOR TASKS
 label with name "bucket: MAJOR TASKS" already exists; use `--force` to update its color and description
-[2025-08-14 06:49:14] SCRIPTS/aa-labels.sh: line 80: exit 0: gh --repo alh-industries/l4vISSUES-gpt5 label create bucket: google conversion tags
+- [2025-08-14 06:49:14] SCRIPTS/aa-labels.sh: line 80: exit 0: gh --repo alh-industries/l4vISSUES-gpt5 label create bucket: google conversion tags
 label with name "bucket: google conversion tags" already exists; use `--force` to update its color and description
 [2025-08-14 06:49:14] SCRIPTS/aa-labels.sh: line 80: exit 0: gh --repo alh-industries/l4vISSUES-gpt5 label create bucket: JOE'S  [REQUESTS+REQUIREMENTS]
 label with name "bucket: JOE'S  [REQUESTS+REQUIREMENTS]" already exists; use `--force` to update its color and description
