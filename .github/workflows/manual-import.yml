@@ -1,5 +1,5 @@
 # .github/workflows/manual-import.yml
-name: Manual Import v2
+name: Manual Import v3
 
 on:
   workflow_dispatch:
