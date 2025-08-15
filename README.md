@@ -230,21 +230,18 @@ chmod +x aa-labels.sh ab-issues.sh ac-subissues.sh ad-project.sh ae-fields.sh
 # authenticate GH CLI (once per machine)
 gh auth login
 
-# set environment variables for this shell
+# set environment variables for this shell (PROJECT_NUMBER is read from OUTPUTS/project_number.txt)
 export GH_REPO="<you>/<repo>"
 export DATA_FILE="data/PLANNERv9.1.tsv"
 export PROJECT_OWNER="@me"              # or your org name
 export PROJECT_TITLE="Imported Plan"    # project name you want
-# PROJECT_NUMBER will be shown/needed after ad-project.sh creates or finds the project
 
 # run scripts in order
 ./aa-labels.sh
 ./ab-issues.sh
 ./ac-subissues.sh
-./ad-project.sh
-# After ad-project.sh, set the number it prints:
-export PROJECT_NUMBER="<printed-number>"
-./ae-fields.sh
+./ad-project.sh        # writes project number to OUTPUTS/project_number.txt
+./ae-fields.sh         # reads project number automatically
 ```
 
 ## Data format (headers & mapping)
