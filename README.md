@@ -16,7 +16,7 @@ OUTPUTS/         # generated maps/outputs
   - `data_pattern` (glob, default `TSV_HERE/*.tsv`)
   - `project_owner` (`@me` for a user project, or your org name)
   - `project_title` (create or reuse)
-- Toggles let you enable/disable each step (defaults are all **on**); a **Run all** toggle lets you check/uncheck everything at once.
+  - Toggles let you enable/disable each step (defaults are all **off**); a **Run all** toggle lets you check/uncheck everything at once.
 - Scripts discover columns by **case‑insensitive substring**:
   - `*title*`, `*body*`, `*label*`, and `PROJECT_FIELD_*[:TYPE]`
 
@@ -33,7 +33,7 @@ OUTPUTS/         # generated maps/outputs
    - **data_pattern**: keep default `TSV_HERE/*.tsv` (or adjust glob)
    - **project_owner**: `@me` (user project) or your **org** name
    - **project_title**: e.g., `Imported Plan`
-3) Leave **Run all** on to execute every step, or uncheck it and flip individual toggles as needed.
+3) Turn **Run all** on to execute every step, or leave it off and flip individual toggles as needed.
 4) Click **Run workflow**.
 
 **That’s it.** No edits to scripts or YAML.

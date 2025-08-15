@@ -30,36 +30,36 @@ on:
       run_all:
         description: Run all scripts (overrides individual toggles)
         type: boolean
-        default: true
+        default: false
       run_labels:
         description: Run aa-labels.sh; (in:userTSV; out:(none))
         type: boolean
-        default: true
+        default: false
         # The script `aa-labels.sh` consumes the `userTSV` file by reading all columns with "label" in the header to compile a unique list of all label names that need to exist in the repository.
       run_issues:
         description: Run ab-issues.sh; (in:userTSV; out:issue_map.tsv)
         type: boolean
-        default: true
+        default: false
         # The script `ab-issues.sh` consumes the `userTSV` file row by row to create a new GitHub issue from the "title", "body", and "label" columns.
       run_subissues:
         description: Run ac-subissues.sh; (in:userTSV, issue_map.tsv; out:subissue_map.tsv)
         type: boolean
-        default: true
+        default: false
         # The script `ac-subissues.sh` consumes the `userTSV` to create sub-issue titles and `issue_map.tsv` to link them to the correct parent issue.
       run_link_subissues:
         description: Run ba-link-subissues.sh; (in:(none); out:(none))
         type: boolean
-        default: true
+        default: false
         # The script `ba-link-subissues.sh` consumes no local files; it scans repository issues via API to link task-list items to parent issues.
       run_project:
         description: Run ad-project.sh; (in:issue_map.tsv, subissue_map.tsv; out:project_number.txt)
         type: boolean
-        default: true
+        default: false
         # The script `ad-project.sh` consumes both `issue_map.tsv` and `subissue_map.tsv` to add all created issues as items to the project.
       run_fields:
         description: Run ae-fields.sh; (in:userTSV, issue_map.tsv, project_number.txt; out:(none))
         type: boolean
-        default: true
+        default: false
         # The script `ae-fields.sh` consumes the `userTSV` for field values, `issue_map.tsv` to identify items, and `project_number.txt` to target the correct project.
 
 permissions:
