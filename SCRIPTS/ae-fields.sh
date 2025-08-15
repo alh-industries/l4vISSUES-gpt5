@@ -9,7 +9,7 @@ Ensures project fields/options exist (idempotent) and applies values to each ite
 
 Env:
   PROJECT_OWNER (optional)   defaults to GH_REPO owner
-  PROJECT_NUMBER (required)  numeric project id (see OUTPUTS/project_number.txt)
+  PROJECT_NUMBER (optional)  numeric project id; defaults to OUTPUTS/project_number.txt
   DATA_FILE (optional)       used if no positional arg
   PARENT_MAP (optional)      default OUTPUTS/issue_map.tsv
 
@@ -31,7 +31,16 @@ if [[ -z "${PROJECT_OWNER:-}" ]]; then
   fi
 fi
 
-: "${PROJECT_NUMBER:?Set PROJECT_NUMBER}"
+# Determine project number from env or output file (idempotent default)
+if [[ -z "${PROJECT_NUMBER:-}" ]]; then
+  if [[ -f OUTPUTS/project_number.txt ]]; then
+    PROJECT_NUMBER="$(<OUTPUTS/project_number.txt)"
+  else
+    echo "ERROR: Set PROJECT_NUMBER or run ad-project.sh to create OUTPUTS/project_number.txt" >&2
+    exit 1
+  fi
+fi
+
 PARENT_MAP="${PARENT_MAP:-OUTPUTS/issue_map.tsv}"
 
 resolve_data_file() {
