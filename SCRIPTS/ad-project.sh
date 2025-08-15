@@ -49,6 +49,19 @@ fi
 
 echo "$proj_num" > OUTPUTS/project_number.txt
 
+# ----- Link project to repository (optional, idempotent) -----
+if [[ -n "${GH_REPO:-}" ]]; then
+  linked_repo=$(gh project view "$proj_num" --owner "$PROJECT_OWNER" --format json \
+    | jq -r --arg r "$GH_REPO" '.linkedRepositories[]?.nameWithOwner' \
+    | grep -Fx "${GH_REPO}" || true)
+  if [[ -n "$linked_repo" ]]; then
+    echo "project already linked to $GH_REPO"
+  else
+    gh project link "$proj_num" --owner "$PROJECT_OWNER" --repo "$GH_REPO" >/dev/null
+    echo "linked project to $GH_REPO"
+  fi
+fi
+
 # ----- Build set of existing item URLs (avoid duplicate adds) -----
 declare -A HAVE
 mapfile -t existing_urls < <(

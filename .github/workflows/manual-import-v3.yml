@@ -1,57 +1,67 @@
-# .github/workflows/manual-import.yml
-name: Manual Import v2
+# .github/workflows/manual-import-v3.yml
+#
+# -- CHANGELOG --
+# v3: added changelog 
+# v3: added gui in/out string
+# v3: added script description
+
+
+name: Manual Import v3
 
 on:
   workflow_dispatch:
+  
+  # workflow gui menu:
     inputs:
       data_pattern:
-        description: Glob for TSV/CSV (latest modified file is used)
+        description: userTSV/CSV (uses last modified)
         default: TSV_HERE/*.tsv
         required: true
       project_owner:
-        description: Project owner (@me for user project, or org name)
-        default: "@me"
-        required: true
+        description: Project owner (@me, <org-name>, blank for repo owner)
+        default: ""
+        required: false
       project_title:
-        description: Project title (create or reuse)
-        default: Imported Plan
+        description: GH Project name (new or old; case-sensitive)
+        default: ProjectName
         required: true
+  
+    # scripts startG :  
       run_labels:
-        description: Run labels step
+        description: Run aa-labels.sh; (in:userTSV; out:(none))
         type: boolean
         default: true
+        # The script `aa-labels.sh` consumes the `userTSV` file by reading all columns with "label" in the header to compile a unique list of all label names that need to exist in the repository.
       run_issues:
-        description: Run issues step
+        description: Run ab-issues.sh; (in:userTSV; out:issue_map.tsv)
         type: boolean
         default: true
+        # The script `ab-issues.sh` consumes the `userTSV` file row by row to create a new GitHub issue from the "title", "body", and "label" columns.
       run_subissues:
-        description: deconcat issue_body into subissues checklist
+        description: Run ac-subissues.sh; (in:userTSV, issue_map.tsv; out:subissue_map.tsv)
         type: boolean
         default: true
+        # The script `ac-subissues.sh` consumes the `userTSV` to create sub-issue titles and `issue_map.tsv` to link them to the correct parent issue.
       run_link_subissues:
-        description: link subissues to parent 
+        description: Run ba-link-subissues.sh; (in:(none); out:(none))
         type: boolean
         default: true        
+        # The script `ba-link-subissues.sh` consumes no local files; it scans repository issues via API to link task-list items to parent issues.
       run_project:
-        description: create/reuse Project + add issues
+        description: Run ad-project.sh; (in:issue_map.tsv, subissue_map.tsv; out:project_number.txt)
         type: boolean
         default: true
+        # The script `ad-project.sh` consumes both `issue_map.tsv` and `subissue_map.tsv` to add all created issues as items to the project.
       run_fields:
-        description: Run project fields step
+        description: Run ae-fields.sh; (in:userTSV, issue_map.tsv, project_number.txt; out:(none))
         type: boolean
         default: true
+        # The script `ae-fields.sh` consumes the `userTSV` for field values, `issue_map.tsv` to identify items, and `project_number.txt` to target the correct project.
 
 permissions:
   contents: write
   issues: write
   repository-projects: write
-
-# Global env & defaults for convenience
-env:
-  GH_REPO: ${{ github.repository }}
-  GH_TOKEN: ${{ inputs.project_owner == '@me' && secrets.GH_PAT || secrets.GITHUB_TOKEN }}  # use PAT for @me projects
-  PROJECT_OWNER: ${{ inputs.project_owner }}
-  PROJECT_TITLE: ${{ inputs.project_title }}
 
 defaults:
   run:
@@ -60,8 +70,15 @@ defaults:
 jobs:
   import:
     runs-on: ubuntu-latest
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+      PROJECT_OWNER: ${{ inputs.project_owner || github.repository_owner }}
+      PROJECT_TITLE: ${{ inputs.project_title }}
+      PARENT_MAP: OUTPUTS/issue_map.tsv
+      SUBMAP: OUTPUTS/subissue_map.tsv
 
-    steps:
+    steps:         
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -97,20 +114,15 @@ jobs:
 
       - name: Labels
         if: ${{ inputs.run_labels }}
-        run: |
-          bash SCRIPTS/aa-labels.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/aa-labels.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Issues
         if: ${{ inputs.run_issues }}
-        run: |
-          bash SCRIPTS/ab-issues.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/ab-issues.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Sub-issues
         if: ${{ inputs.run_subissues }}
-        env:
-          PARENT_MAP: OUTPUTS/issue_map.tsv
-        run: |
-          bash SCRIPTS/ac-subissues.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/ac-subissues.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: link subissues
         if: ${{ inputs.run_link_subissues }}
@@ -119,9 +131,6 @@ jobs:
       - name: Project (create/reuse + add items)
         if: ${{ inputs.run_project }}
         id: project
-        env:
-          PARENT_MAP: OUTPUTS/issue_map.tsv
-          SUBMAP: OUTPUTS/subissue_map.tsv
         run: |
           set -euo pipefail
           bash SCRIPTS/ad-project.sh
@@ -130,18 +139,14 @@ jobs:
 
       - name: Fields
         if: ${{ inputs.run_fields }}
-        env:
-          PROJECT_NUMBER: ${{ steps.project.outputs.project_number }}
-          PARENT_MAP: OUTPUTS/issue_map.tsv
-        run: |
-          bash SCRIPTS/ae-fields.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/ae-fields.sh "${{ steps.datafile.outputs.data_file }}"
 
       - name: Commit outputs
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add OUTPUTS/*
+          git add OUTPUTS || true
           git commit -m "Save workflow outputs" || echo "No changes"
           git push
 
