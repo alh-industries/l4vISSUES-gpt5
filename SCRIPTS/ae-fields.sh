@@ -8,7 +8,7 @@ Usage: $(basename "$0") [DATA_FILE or GLOB]
 Ensures project fields/options exist (idempotent) and applies values to each item.
 
 Env:
-  PROJECT_OWNER (required)
+  PROJECT_OWNER (optional)   defaults to GH_REPO owner
   PROJECT_NUMBER (required)  numeric project id (see OUTPUTS/project_number.txt)
   DATA_FILE (optional)       used if no positional arg
   PARENT_MAP (optional)      default OUTPUTS/issue_map.tsv
@@ -22,24 +22,36 @@ EOF
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
-: "${PROJECT_OWNER:?Set PROJECT_OWNER}"
+if [[ -z "${PROJECT_OWNER:-}" ]]; then
+  if [[ -n "${GH_REPO:-}" ]]; then
+    PROJECT_OWNER="${GH_REPO%%/*}"
+  else
+    echo "ERROR: Set PROJECT_OWNER or GH_REPO" >&2
+    exit 1
+  fi
+fi
+
 : "${PROJECT_NUMBER:?Set PROJECT_NUMBER}"
 PARENT_MAP="${PARENT_MAP:-OUTPUTS/issue_map.tsv}"
+
+resolve_data_file() {
+  local spec="$1"
+  shopt -s nullglob
+  local matches
+  readarray -t matches < <(compgen -G "$spec")
+  (( ${#matches[@]} > 0 )) || { echo "ERROR: no files match: $spec" >&2; exit 1; }
+  local latest
+  # shellcheck disable=SC2012
+  latest=$(ls -1t "${matches[@]}" | head -n1)
+  printf '%s\n' "$latest"
+  shopt -u nullglob
+}
 
 DATA_SPEC="${1:-${DATA_FILE:-}}"
 [[ -n "$DATA_SPEC" ]] || { echo "ERROR: provide DATA_FILE or glob (arg or env)."; usage; exit 1; }
 [[ -f "$PARENT_MAP" ]] || { echo "ERROR: missing $PARENT_MAP (run ab-issues.sh & ad-project.sh)"; exit 1; }
 
-# ---- Resolve DATA_FILE from glob (pick latest mtime) ----
-shopt -s nullglob
-matches=( $DATA_SPEC )
-(( ${#matches[@]} > 0 )) || { echo "ERROR: no files match: $DATA_SPEC" >&2; exit 1; }
-if (( ${#matches[@]} > 1 )); then
-  DATA_FILE="$(ls -1t "${matches[@]}" | head -n1)"
-else
-  DATA_FILE="${matches[0]}"
-fi
-shopt -u nullglob
+DATA_FILE="$(resolve_data_file "$DATA_SPEC")"
 
 DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
 
