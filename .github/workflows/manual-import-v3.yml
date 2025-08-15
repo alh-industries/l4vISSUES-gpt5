@@ -72,8 +72,6 @@ env:
   PROJECT_TITLE: ${{ inputs.project_title }}
   PARENT_MAP: OUTPUTS/issue_map.tsv
   SUBMAP: OUTPUTS/subissue_map.tsv
-  PROJECT_NUMBER: OUTPUTS/project_number.txt
-
   
 defaults:
   run:
