@@ -149,7 +149,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add OUTPUTS/*
+          git add OUTPUTS || true
           git commit -m "Save workflow outputs" || echo "No changes"
           git push
 
