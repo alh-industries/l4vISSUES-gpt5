@@ -5,39 +5,39 @@ on:
   workflow_dispatch:
     inputs:
       data_pattern:
-        description: Glob for TSV/CSV (latest modified file is used)
+        description: userTSV/CSV (uses last modified)
         default: TSV_HERE/*.tsv
         required: true
       project_owner:
-        description: Project owner (@me for user project, or org name)
-        default: "@me"
+        description: Project owner: "@me", org name, or repo owner (default)
+        default: ${{ github.repository_owner }}
         required: true
       project_title:
-        description: Project title (create or reuse)
-        default: Imported Plan
+        description: Project title (create or reuse); case-sensitive
+        default: ProjectName
         required: true
       run_labels:
-        description: Run labels step
+        description: run aa-labels; read:userTSV
         type: boolean
         default: true
       run_issues:
-        description: Run issues step
+        description: Run ab-issues; read:userTSV write:issue_map.tsv
         type: boolean
         default: true
       run_subissues:
-        description: deconcat issue_body into subissues checklist
+        description: Run ac-subissues; read:issue_map write:subissue_map.tsv
         type: boolean
         default: true
       run_link_subissues:
-        description: link subissues to parent 
+        description: Run ba-link-subissues 
         type: boolean
         default: true        
       run_project:
-        description: create/reuse Project + add issues
+        description: Run ad-project; creates project_number.txt
         type: boolean
         default: true
       run_fields:
-        description: Run project fields step
+        description: Run ae-fields 
         type: boolean
         default: true
 
