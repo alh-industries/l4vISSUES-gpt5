@@ -65,7 +65,7 @@ while IFS= read -r line; do
 done < <(tail -n +2 "$DATA_FILE")
 
 # idempotent: list existing labels once
-mapfile -t EXISTING < <(gh label list --json name -q '.[].name')
+mapfile -t EXISTING < <(gh label list --limit 1000 --json name -q '.[].name')
 declare -A HAVE; for n in "${EXISTING[@]}"; do HAVE["$n"]=1; done
 
 # create only missing (no color/description)
