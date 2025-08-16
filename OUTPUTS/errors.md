@@ -15,3 +15,6 @@
 -----
 - [2025-08-16 02:29:40] source: Manual Import v3/import | script: SCRIPTS/ae-fields.sh | line: 119 | exit: 1 | cmd: gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" --single-select-options "$options_string" > /dev/null
 
+---
+- [2025-08-16 02:54:32] source: Manual Import v3/import | script: SCRIPTS/ae-fields.sh | line: 126 | exit: 1 | cmd: gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" --single-select-options "$options_string" > /dev/null
+
