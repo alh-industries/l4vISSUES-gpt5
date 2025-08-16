@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -E
+set -Eeuo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ERROR_LOG_FILE="$script_dir/../OUTPUTS/errors.md"
@@ -36,7 +36,7 @@ log_error() {
     [[ -n "$err" ]] && printf '%s\n' "$err"
     printf '\n'
   } >> "$ERROR_LOG_FILE"
-  return 0
+  return "$exit_code"
 }
 
 trap 'log_error $? $LINENO "$BASH_COMMAND"' ERR
