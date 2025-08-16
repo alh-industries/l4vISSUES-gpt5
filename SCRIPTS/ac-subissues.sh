@@ -69,7 +69,9 @@ done
 TMPDIR="$(mktemp -d)"; trap 'rm -rf "$TMPDIR"' EXIT
 
 # Process rows
-while IFS= read -r line; do
+# Handle files missing a trailing newline by processing the final line even if
+# `read` returns a non-zero status.
+while IFS= read -r line || [[ -n "$line" ]]; do
   mapfile -t vals < <(
     printf '%s' "$line" | tr -d '\r' |
     awk -v FS="$DELIM" '{for(i=1;i<=NF;i++) print $i}'
@@ -119,3 +121,4 @@ done < <(tail -n +2 "$DATA_FILE")
 
 echo "sub-issues done (source: $DATA_FILE). map: $SUBMAP_OUT"
 
+exit 0
