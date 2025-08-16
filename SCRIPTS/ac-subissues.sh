@@ -9,7 +9,6 @@ Creates sub-issues from the parent row's body by splitting on ';'.
 Inherits labels from the row. Links child issues in the parent's body.
 
 Env:
-  GH_REPO    (required) e.g. owner/repo
   DATA_FILE  (optional) used if no positional arg
   PARENT_MAP (optional) defaults to OUTPUTS/issue_map.tsv
 
@@ -19,7 +18,6 @@ EOF
 }
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
-: "${GH_REPO:?Set GH_REPO=owner/repo}"
 PARENT_MAP="${PARENT_MAP:-OUTPUTS/issue_map.tsv}"
 
 DATA_SPEC="${1:-${DATA_FILE:-}}"
@@ -38,7 +36,6 @@ shopt -u nullglob
 
 [[ -f "$PARENT_MAP" ]] || { echo "ERROR: missing parent map: $PARENT_MAP (run ab-issues.sh first)"; exit 1; }
 
-GH_REPO_FLAG=(--repo "$GH_REPO")
 DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
 
 mkdir -p OUTPUTS
@@ -97,18 +94,19 @@ while IFS= read -r line; do
     [[ -z "$st" ]] && continue
 
     echo "create sub-issue: $st"
-    curl="$(gh "${GH_REPO_FLAG[@]}" issue create --title "$st" --body "" "${label_args[@]}")"
+    curl="$(gh issue create --title "$st" --body "" "${label_args[@]}")"
     cnum="$(basename "$curl")"
     printf "%s\t%s\t%s\t%s\n" "$ptitle" "$st" "$curl" "$cnum" >> "$SUBMAP_OUT"
 
     # Attach to parent via task list
     pbody="$TMPDIR/p.txt"
-    gh "${GH_REPO_FLAG[@]}" issue view "$pnum" --json body -q '.body' > "$pbody"
+    gh issue view "$pnum" --json body -q '.body' > "$pbody"
     printf '\n- [ ] %s (#%s)\n' "$st" "$cnum" >> "$pbody"
-    gh "${GH_REPO_FLAG[@]}" issue edit "$pnum" --body-file "$pbody"
+    gh issue edit "$pnum" --body-file "$pbody"
 
     sleep 1
   done
 done < <(tail -n +2 "$DATA_FILE")
 
 echo "sub-issues done (source: $DATA_FILE). map: $SUBMAP_OUT"
+

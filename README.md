@@ -42,7 +42,7 @@ OUTPUTS/         # generated maps/outputs
 1) **Labels (idempotent)** — creates only missing labels.
 2) **Issues (create‑only)** — creates issues; attaches all `*label*` columns; body passed verbatim via `--body-file`. Produces `OUTPUTS/issue_map.tsv`.
 3) **Sub‑issues (create‑only)** — splits parent body on `;`, creates child issues, links them back. Produces `OUTPUTS/subissue_map.tsv`.
-4) **Project (idempotent)** — creates or reuses project; links the repository (if `GH_REPO` set); adds all issue URLs; saves number to `OUTPUTS/project_number.txt`.
+4) **Project (idempotent)** — creates or reuses project; links the repository; adds all issue URLs; saves number to `OUTPUTS/project_number.txt`.
 5) **Fields (idempotent)** — creates fields/options if missing; applies values from `PROJECT_FIELD_*[:TYPE]`.
 
 ## Notes
@@ -97,7 +97,7 @@ Order of operation (alphabetical naming keeps them in sequence):
 
 4. **ad-project.sh**
    - Creates or reuses a GitHub Project
-   - Links the project to `GH_REPO` when provided
+   - Links the project to the repository
    - Adds all issues and sub-issues to the project
    - Saves project number to `OUTPUTS/project_number.txt`
 
@@ -150,7 +150,6 @@ Go to **Actions → Manual Import → Run workflow**. Fill in:
 ---
 
 ### **What you don’t need to enter**
-- **GH_REPO** — auto-set by the workflow
 - **PROJECT_NUMBER** — auto-detected from the created/reused project
 - **Script paths** — workflow handles them
 - **Auth during run** — handled via GH_TOKEN or GH_PAT
@@ -231,7 +230,6 @@ chmod +x aa-labels.sh ab-issues.sh ac-subissues.sh ad-project.sh ae-fields.sh
 gh auth login
 
 # set environment variables for this shell (PROJECT_NUMBER is read from OUTPUTS/project_number.txt)
-export GH_REPO="<you>/<repo>"
 export DATA_FILE="data/PLANNERv9.1.tsv"
 export PROJECT_OWNER="@me"              # or your org name
 export PROJECT_TITLE="Imported Plan"    # project name you want
@@ -278,7 +276,6 @@ export PROJECT_TITLE="Imported Plan"    # project name you want
 
 ## Common pitfalls
 - Not authenticated: run `gh auth login`.
-- Wrong repo: ensure `export GH_REPO="<you>/<repo>"` is set before running.
 - Missing Bash 4+: install a newer bash and run the scripts with that interpreter.
 - CSV with quoted commas: these scripts are tuned for TSV. If you must use CSV with complex quoting, consider converting to TSV first.
 

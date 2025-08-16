@@ -9,18 +9,16 @@ Reads TSV/CSV and creates missing labels only (idempotent).
 DATA_FILE can be a concrete path or a glob like TSV_HERE/*.tsv
 
 Env:
-  GH_REPO   (required)  e.g. owner/repo
   DATA_FILE (optional)  used if no positional arg
 
 Examples:
-  GH_REPO=owner/repo ./SCRIPTS/aa-labels.sh TSV_HERE/*.tsv
-  GH_REPO=owner/repo DATA_FILE=TSV_HERE/PLANNERv9.1.tsv ./SCRIPTS/aa-labels.sh
+  ./SCRIPTS/aa-labels.sh TSV_HERE/*.tsv
+  DATA_FILE=TSV_HERE/PLANNERv9.1.tsv ./SCRIPTS/aa-labels.sh
 EOF
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
-: "${GH_REPO:?Set GH_REPO=owner/repo}"
 DATA_SPEC="${1:-${DATA_FILE:-}}"
 [[ -n "$DATA_SPEC" ]] || { echo "ERROR: provide DATA_FILE or glob (arg or env)."; usage; exit 1; }
 
@@ -37,7 +35,6 @@ else
 fi
 shopt -u nullglob
 
-GH_REPO_FLAG=(--repo "$GH_REPO")
 DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
 
 # headers
@@ -68,7 +65,7 @@ while IFS= read -r line; do
 done < <(tail -n +2 "$DATA_FILE")
 
 # idempotent: list existing labels once
-mapfile -t EXISTING < <(gh "${GH_REPO_FLAG[@]}" label list --json name -q '.[].name')
+mapfile -t EXISTING < <(gh label list --json name -q '.[].name')
 declare -A HAVE; for n in "${EXISTING[@]}"; do HAVE["$n"]=1; done
 
 # create only missing (no color/description)
@@ -77,7 +74,7 @@ for label in "${!NEED[@]}"; do
     echo "have: $label"
   else
     echo "create: $label"
-    run_cmd gh "${GH_REPO_FLAG[@]}" label create "$label"
+    run_cmd gh label create "$label"
   fi
 done
 

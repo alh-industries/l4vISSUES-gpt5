@@ -8,7 +8,7 @@ Usage: $(basename "$0")
 Creates or reuses a non-classic GitHub Project, then adds all parent/sub issues.
 
 Env (all via env vars):
-  PROJECT_OWNER (required)  @me or org name
+  PROJECT_OWNER (optional)  defaults to repo owner
   PROJECT_TITLE (required)  project title to create or reuse
   PARENT_MAP    (optional)  default OUTPUTS/issue_map.tsv
   SUBMAP        (optional)  default OUTPUTS/subissue_map.tsv
@@ -20,7 +20,8 @@ EOF
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
-: "${PROJECT_OWNER:?Set PROJECT_OWNER (@me or org)}"
+GH_REPO="${GH_REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
+PROJECT_OWNER="${PROJECT_OWNER:-${GH_REPO%%/*}}"
 : "${PROJECT_TITLE:?Set PROJECT_TITLE}"
 PARENT_MAP="${PARENT_MAP:-OUTPUTS/issue_map.tsv}"
 SUBMAP="${SUBMAP:-OUTPUTS/subissue_map.tsv}"
@@ -49,17 +50,15 @@ fi
 
 echo "$proj_num" > OUTPUTS/project_number.txt
 
-# ----- Link project to repository (optional, idempotent) -----
-if [[ -n "${GH_REPO:-}" ]]; then
-  linked_repo=$(gh project view "$proj_num" --owner "$PROJECT_OWNER" --format json \
-    | jq -r --arg r "$GH_REPO" '.linkedRepositories[]?.nameWithOwner' \
-    | grep -Fx "${GH_REPO}" || true)
-  if [[ -n "$linked_repo" ]]; then
-    echo "project already linked to $GH_REPO"
-  else
-    gh project link "$proj_num" --owner "$PROJECT_OWNER" --repo "$GH_REPO" >/dev/null
-    echo "linked project to $GH_REPO"
-  fi
+# ----- Link project to repository (idempotent) -----
+linked_repo=$(gh project view "$proj_num" --owner "$PROJECT_OWNER" --format json \
+  | jq -r --arg r "$GH_REPO" '.linkedRepositories[]?.nameWithOwner' \
+  | grep -Fx "$GH_REPO" || true)
+if [[ -n "$linked_repo" ]]; then
+  echo "project already linked to $GH_REPO"
+else
+  gh project link "$proj_num" >/dev/null
+  echo "linked project to $GH_REPO"
 fi
 
 # ----- Build set of existing item URLs (avoid duplicate adds) -----
@@ -98,3 +97,4 @@ if [[ -f "$SUBMAP" ]]; then
 fi
 
 echo "project import done (#$proj_num). Output: OUTPUTS/project_number.txt"
+
