@@ -42,11 +42,8 @@ resolve_data_file() {
   shopt -s nullglob
   local matches
   readarray -t matches < <(compgen -G "$spec")
-  (( ${#matches[@]} > 0 )) || { echo "ERROR: no files match: $spec" >&2; exit 1; }
-  local latest
-  # shellcheck disable=SC2012
-  latest=$(ls -1t "${matches[@]}" | head -n1)
-  printf '%s\n' "$latest"
+  (( ${#matches[@]} )) || { echo "ERROR: no files match: $spec" >&2; exit 1; }
+  printf '%s\n' "${matches[0]}"
   shopt -u nullglob
 }
 

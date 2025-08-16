@@ -22,17 +22,11 @@ EOF
 DATA_SPEC="${1:-${DATA_FILE:-}}"
 [[ -n "$DATA_SPEC" ]] || { echo "ERROR: provide DATA_FILE or glob (arg or env)."; usage; exit 1; }
 
-# Resolve glob → pick latest mtime
+# Resolve glob → first match
 shopt -s nullglob
 matches=( $DATA_SPEC )
-if (( ${#matches[@]} == 0 )); then
-  echo "ERROR: no files match: $DATA_SPEC" >&2; exit 1
-fi
-if (( ${#matches[@]} > 1 )); then
-  DATA_FILE="$(ls -1t "${matches[@]}" | head -n1)"
-else
-  DATA_FILE="${matches[0]}"
-fi
+(( ${#matches[@]} )) || { echo "ERROR: no files match: $DATA_SPEC" >&2; exit 1; }
+DATA_FILE="${matches[0]}"
 shopt -u nullglob
 
 DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
