@@ -75,8 +75,11 @@ jobs:
   import:
     runs-on: ubuntu-latest
     env:
+      PROJECT_OWNER: ${{ github.event.inputs.project_owner || github.repository_owner }}
+      PROJECT_TITLE: ${{ github.event.inputs.project_title }}
+      DATA_FILE: ${{ github.event.inputs.data_file }}
       GH_REPO: ${{ github.repository }}
-      GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
       PROJECT_OWNER: ${{ inputs.project_owner }}
       PROJECT_TITLE: ${{ inputs.project_title }}
       PARENT_MAP: OUTPUTS/issue_map.tsv
