@@ -42,11 +42,8 @@ resolve_data_file() {
   shopt -s nullglob
   local matches
   readarray -t matches < <(compgen -G "$spec")
-  (( ${#matches[@]} > 0 )) || { echo "ERROR: no files match: $spec" >&2; exit 1; }
-  local latest
-  # shellcheck disable=SC2012
-  latest=$(ls -1t "${matches[@]}" | head -n1)
-  printf '%s\n' "$latest"
+  (( ${#matches[@]} )) || { echo "ERROR: no files match: $spec" >&2; exit 1; }
+  printf '%s\n' "${matches[0]}"
   shopt -u nullglob
 }
 
@@ -56,7 +53,7 @@ DATA_SPEC="${1:-${DATA_FILE:-}}"
 
 DATA_FILE="$(resolve_data_file "$DATA_SPEC")"
 
-DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
+DELIM=$'\t'
 
 # ---- Build URL -> itemId map from the project (fresh) ----
 declare -A URL2ITEM

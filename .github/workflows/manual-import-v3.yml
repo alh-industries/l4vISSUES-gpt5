@@ -13,10 +13,6 @@ on:
 
   # workflow gui menu:
     inputs:
-      data_pattern:
-        description: userTSV/CSV (uses last modified)
-        default: TSV_HERE/*.tsv
-        required: true
       project_owner:
         description: Project owner (@me, <org-name>, blank for repo owner)
         default: ""
@@ -77,11 +73,11 @@ jobs:
     env:
       PROJECT_OWNER: ${{ github.event.inputs.project_owner || github.repository_owner }}
       PROJECT_TITLE: ${{ github.event.inputs.project_title }}
-      DATA_FILE: ${{ github.event.inputs.data_file }}
       GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
       GH_REPO: ${{ github.repository }}
       PARENT_MAP: "OUTPUTS/issue_map.tsv"
       SUBMAP: "OUTPUTS/subissue_map.tsv"
+      DATA_FILE: "TSV_HERE/*.tsv"
 
     steps:
       - name: Checkout
@@ -96,21 +92,6 @@ jobs:
           jq --version
           gh auth status -h github.com || true
 
-      - name: Resolve data file from glob
-        id: datafile
-        run: |
-          set -euo pipefail
-          pattern='${{ inputs.data_pattern }}'
-          shopt -s nullglob
-          files=( $pattern )
-          if [[ ${#files[@]} -eq 0 ]]; then
-            echo "No files match: $pattern" >&2
-            exit 1
-          fi
-          DATA_FILE="$(ls -1t ${pattern} | head -n1)"
-          echo "DATA_FILE=$DATA_FILE" | tee -a "$GITHUB_ENV"
-          echo "data_file=$DATA_FILE" >> "$GITHUB_OUTPUT"
-
       - name: Prepare scripts
         run: |
           set -euo pipefail
@@ -119,15 +100,15 @@ jobs:
 
       - name: Labels
         if: ${{ inputs.run_all || inputs.run_labels }}
-        run: bash SCRIPTS/aa-labels.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/aa-labels.sh
 
       - name: Issues
         if: ${{ inputs.run_all || inputs.run_issues }}
-        run: bash SCRIPTS/ab-issues.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/ab-issues.sh
 
       - name: Sub-issues
         if: ${{ inputs.run_all || inputs.run_subissues }}
-        run: bash SCRIPTS/ac-subissues.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/ac-subissues.sh
 
       - name: link subissues
         if: ${{ inputs.run_all || inputs.run_link_subissues }}
@@ -144,7 +125,7 @@ jobs:
 
       - name: Fields
         if: ${{ inputs.run_all || inputs.run_fields }}
-        run: bash SCRIPTS/ae-fields.sh "${{ steps.datafile.outputs.data_file }}"
+        run: bash SCRIPTS/ae-fields.sh
 
       - name: Commit outputs
         if: always()

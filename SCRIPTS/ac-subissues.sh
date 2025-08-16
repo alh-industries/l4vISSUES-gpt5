@@ -24,20 +24,16 @@ PARENT_MAP="${PARENT_MAP:-OUTPUTS/issue_map.tsv}"
 DATA_SPEC="${1:-${DATA_FILE:-}}"
 [[ -n "$DATA_SPEC" ]] || { echo "ERROR: provide DATA_FILE or glob (arg or env)."; usage; exit 1; }
 
-# Resolve glob -> choose latest mtime
+# Resolve glob -> first match
 shopt -s nullglob
 matches=( $DATA_SPEC )
-(( ${#matches[@]} > 0 )) || { echo "ERROR: no files match: $DATA_SPEC" >&2; exit 1; }
-if (( ${#matches[@]} > 1 )); then
-  DATA_FILE="$(ls -1t "${matches[@]}" | head -n1)"
-else
-  DATA_FILE="${matches[0]}"
-fi
+(( ${#matches[@]} )) || { echo "ERROR: no files match: $DATA_SPEC" >&2; exit 1; }
+DATA_FILE="${matches[0]}"
 shopt -u nullglob
 
 [[ -f "$PARENT_MAP" ]] || { echo "ERROR: missing parent map: $PARENT_MAP (run ab-issues.sh first)"; exit 1; }
 
-DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
+DELIM=$'\t'
 
 mkdir -p OUTPUTS
 SUBMAP_OUT="OUTPUTS/subissue_map.tsv"
