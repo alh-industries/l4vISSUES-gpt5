@@ -7,6 +7,7 @@ usage() {
 Usage: $(basename "$0") [DATA_FILE or GLOB]
 Creates sub-issues from the parent row's body by splitting on ';'.
 Inherits labels from the row. Links child issues in the parent's body.
+Idempotent via OUTPUTS/subissue_map.tsv.
 
 Env:
   DATA_FILE  (optional) used if no positional arg
@@ -40,7 +41,13 @@ DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
 
 mkdir -p OUTPUTS
 SUBMAP_OUT="OUTPUTS/subissue_map.tsv"
-: > "$SUBMAP_OUT"
+touch "$SUBMAP_OUT"
+
+# load existing parent:child mappings
+declare -A HAVE_PAIR=()
+while IFS=$'\t' read -r pt ct _ _; do
+  [[ -n "$pt" && -n "$ct" ]] && HAVE_PAIR["$pt:$ct"]=1
+done < "$SUBMAP_OUT"
 
 # Load parent map Title -> {URL, Number}
 declare -A T2URL T2NUM
@@ -92,11 +99,17 @@ while IFS= read -r line; do
   for token in "${subs[@]}"; do
     st="$(printf '%s' "$token" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
     [[ -z "$st" ]] && continue
+    key="$ptitle:$st"
+    if [[ -n "${HAVE_PAIR[$key]:-}" ]]; then
+      echo "skip existing sub-issue: $key"
+      continue
+    fi
 
     echo "create sub-issue: $st"
     curl="$(gh issue create --title "$st" --body "" "${label_args[@]}")"
     cnum="$(basename "$curl")"
     printf "%s\t%s\t%s\t%s\n" "$ptitle" "$st" "$curl" "$cnum" >> "$SUBMAP_OUT"
+    HAVE_PAIR["$key"]=1
 
     # Attach to parent via task list
     pbody="$TMPDIR/p.txt"
