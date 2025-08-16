@@ -80,7 +80,9 @@ ensure_item () {
 }
 
 # ---- Headers & detect field columns ----
+# strip possible BOM then split headers
 IFS= read -r HEADER_LINE < "$DATA_FILE" || { echo "ERROR: empty file: $DATA_FILE"; exit 1; }
+HEADER_LINE="${HEADER_LINE#$'\ufeff'}"
 mapfile -t HEADERS < <(printf '%s' "$HEADER_LINE" | tr -d '\r' | awk -v FS="$DELIM" '{for(i=1;i<=NF;i++)print $i}')
 
 TITLE_IDX=-1
@@ -104,15 +106,22 @@ done
 FIELDS_JSON="$(mktemp)"; trap 'rm -f "$FIELDS_JSON"' EXIT
 gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json > "$FIELDS_JSON"
 
+trim(){
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
+}
+
 ensure_field(){
-  local name="$1" type="$2"
-  local j="$3"
+  local name="$1" type="$2" j="$3"
   jq -e --arg n "$name" '.fields[] | select(.name==$n)' "$FIELDS_JSON" >/dev/null && return 0
   echo "create field: $name ($type)"
   if [[ "$type" == "SINGLE_SELECT" ]]; then
-    # For single select, we need to gather all possible options from the data file first.
+    # gather unique options from data column, trimming whitespace
     local options_string
-    options_string=$(cut -d "$DELIM" -f $((PF_IDXS[j]+1)) < "$DATA_FILE" | tail -n +2 | sort -u | paste -sd "," -)
+    options_string=$(awk -v FS="$DELIM" -v col=$((PF_IDXS[j]+1)) 'NR>1 {val=$col; gsub(/\r/,"",val); gsub(/^[ \t]+|[ \t]+$/, "", val); if(val!="") print val}' "$DATA_FILE" \
+      | sort -u | paste -sd ',' -)
     gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" --single-select-options "$options_string" >/dev/null
   else
     gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" >/dev/null
@@ -149,7 +158,7 @@ while IFS= read -r line; do
 
   for j in "${!PF_IDXS[@]}"; do
     idx="${PF_IDXS[$j]}"; fname="${PF_NAMES[$j]}"; ftype="${PF_TYPES[$j]}"
-    val="${vals[$idx]:-}"
+    val="$(trim "${vals[$idx]:-}")"
     [[ -z "$val" ]] && continue
 
     case "$ftype" in
