@@ -16,7 +16,7 @@ OUTPUTS/         # generated maps/outputs
   - `data_pattern` (glob, default `TSV_HERE/*.tsv`)
   - `project_owner` (`@me` for a user project, or your org name)
   - `project_title` (create or reuse)
-- Toggles let you enable/disable each step (defaults are all **on**).
+  - Toggles let you enable/disable each step (defaults are all **off**); a **Run all** toggle lets you check/uncheck everything at once.
 - Scripts discover columns by **case‑insensitive substring**:
   - `*title*`, `*body*`, `*label*`, and `PROJECT_FIELD_*[:TYPE]`
 
@@ -33,7 +33,7 @@ OUTPUTS/         # generated maps/outputs
    - **data_pattern**: keep default `TSV_HERE/*.tsv` (or adjust glob)
    - **project_owner**: `@me` (user project) or your **org** name
    - **project_title**: e.g., `Imported Plan`
-3) Leave all toggles on (or switch off what you don’t need).
+3) Turn **Run all** on to execute every step, or leave it off and flip individual toggles as needed.
 4) Click **Run workflow**.
 
 **That’s it.** No edits to scripts or YAML.
@@ -230,21 +230,18 @@ chmod +x aa-labels.sh ab-issues.sh ac-subissues.sh ad-project.sh ae-fields.sh
 # authenticate GH CLI (once per machine)
 gh auth login
 
-# set environment variables for this shell
+# set environment variables for this shell (PROJECT_NUMBER is read from OUTPUTS/project_number.txt)
 export GH_REPO="<you>/<repo>"
 export DATA_FILE="data/PLANNERv9.1.tsv"
 export PROJECT_OWNER="@me"              # or your org name
 export PROJECT_TITLE="Imported Plan"    # project name you want
-# PROJECT_NUMBER will be shown/needed after ad-project.sh creates or finds the project
 
 # run scripts in order
 ./aa-labels.sh
 ./ab-issues.sh
 ./ac-subissues.sh
-./ad-project.sh
-# After ad-project.sh, set the number it prints:
-export PROJECT_NUMBER="<printed-number>"
-./ae-fields.sh
+./ad-project.sh        # writes project number to OUTPUTS/project_number.txt
+./ae-fields.sh         # reads project number automatically
 ```
 
 ## Data format (headers & mapping)
