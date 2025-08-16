@@ -8,7 +8,7 @@ Usage: $(basename "$0") [DATA_FILE or GLOB]
 Ensures project fields/options exist (idempotent) and applies values to each item.
 
 Env:
-  PROJECT_OWNER (optional)   defaults to GH_REPO owner
+  PROJECT_OWNER (optional)   defaults to repo owner
   PROJECT_NUMBER (optional)  numeric project id; defaults to OUTPUTS/project_number.txt
   DATA_FILE (optional)       used if no positional arg
   PARENT_MAP (optional)      default OUTPUTS/issue_map.tsv
@@ -22,14 +22,8 @@ EOF
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
-if [[ -z "${PROJECT_OWNER:-}" ]]; then
-  if [[ -n "${GH_REPO:-}" ]]; then
-    PROJECT_OWNER="${GH_REPO%%/*}"
-  else
-    echo "ERROR: Set PROJECT_OWNER or GH_REPO" >&2
-    exit 1
-  fi
-fi
+GH_REPO="${GH_REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
+PROJECT_OWNER="${PROJECT_OWNER:-${GH_REPO%%/*}}"
 
 # Determine project number from env or output file (idempotent default)
 if [[ -z "${PROJECT_NUMBER:-}" ]]; then
@@ -177,3 +171,4 @@ while IFS= read -r line; do
 done < <(tail -n +2 "$DATA_FILE")
 
 echo "project fields applied (source: $DATA_FILE)."
+

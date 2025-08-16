@@ -8,21 +8,19 @@ Usage: $(basename "$0") [DATA_FILE or GLOB]
 Creates issues from TSV/CSV. No idempotency (re-runs will create duplicates).
 
 Env:
-  GH_REPO   (required)  e.g. owner/repo
   DATA_FILE (optional)  used if no positional arg
 
 Outputs:
-  OUTPUTS/issue_map.tsv   (Title \\t URL \\t Number)
+  OUTPUTS/issue_map.tsv   (Title \t URL \t Number)
 
 Examples:
-  GH_REPO=owner/repo ./SCRIPTS/ab-issues.sh TSV_HERE/*.tsv
-  GH_REPO=owner/repo DATA_FILE=TSV_HERE/PLANNERv9.1.tsv ./SCRIPTS/ab-issues.sh
+  ./SCRIPTS/ab-issues.sh TSV_HERE/*.tsv
+  DATA_FILE=TSV_HERE/PLANNERv9.1.tsv ./SCRIPTS/ab-issues.sh
 EOF
 }
 
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] && { usage; exit 0; }
 
-: "${GH_REPO:?Set GH_REPO=owner/repo}"
 DATA_SPEC="${1:-${DATA_FILE:-}}"
 [[ -n "$DATA_SPEC" ]] || { echo "ERROR: provide DATA_FILE or glob (arg or env)."; usage; exit 1; }
 
@@ -39,7 +37,6 @@ else
 fi
 shopt -u nullglob
 
-GH_REPO_FLAG=(--repo "$GH_REPO")
 DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
 
 mkdir -p OUTPUTS
@@ -90,7 +87,7 @@ while IFS= read -r line; do
   fi
 
   echo "create: $title"
-  url="$(run_cmd gh "${GH_REPO_FLAG[@]}" issue create --title "$title" --body-file "$body_file" "${label_args[@]}")"
+  url="$(run_cmd gh issue create --title "$title" --body-file "$body_file" "${label_args[@]}")"
   if [[ -z "$url" ]]; then
     echo "warn: failed to create issue: $title (see OUTPUTS/errors.md)" >&2
     continue
@@ -103,3 +100,4 @@ while IFS= read -r line; do
 done < <(tail -n +2 "$DATA_FILE")
 
 echo "issues done (source: $DATA_FILE). map: $MAP_OUT"
+

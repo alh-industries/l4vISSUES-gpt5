@@ -41,6 +41,8 @@ LOG_LEVEL="${LOG_LEVEL:-info}"          # debug|info|warn|error
 
 # -----------------------------------------------------------------------------
 
+GH_REPO="${GH_REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
+
 usage() {
   cat <<'USAGE'
 Usage:
@@ -57,7 +59,7 @@ Options (all optional; env vars shown in [] can also be used):
   -h, --help                         Show help
 
 Environment:
-  GH_REPO (required) e.g. "OWNER/REPO"
+  GH_REPO (optional) e.g. "OWNER/REPO" (defaults to current repo)
   GH_TOKEN (normally provided to gh by Actions)
 USAGE
 }

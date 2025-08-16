@@ -77,7 +77,7 @@ jobs:
     env:
       GH_REPO: ${{ github.repository }}
       GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-      PROJECT_OWNER: ${{ inputs.project_owner || github.repository_owner }}
+      PROJECT_OWNER: ${{ inputs.project_owner }}
       PROJECT_TITLE: ${{ inputs.project_title }}
       PARENT_MAP: OUTPUTS/issue_map.tsv
       SUBMAP: OUTPUTS/subissue_map.tsv
