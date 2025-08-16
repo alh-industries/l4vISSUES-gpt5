@@ -110,12 +110,19 @@ gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json >
 ensure_field(){
   local name="$1" type="$2"
   local j="$3"
-  jq -e --arg n "$name" '.fields[] | select(.name==$n)' "$FIELDS_JSON" >/dev/null && return 0
+  jq -e --arg n "$name" '.[] | select(.name==$n)' "$FIELDS_JSON" >/dev/null && return 0
   echo "create field: $name ($type)"
   if [[ "$type" == "SINGLE_SELECT" ]]; then
-    # For single select, we need to gather all possible options from the data file first.
+    # For single select, gather unique non-empty options from the data file.
     local options_string
-    options_string=$(cut -d "$DELIM" -f $((PF_IDXS[j]+1)) < "$DATA_FILE" | tail -n +2 | sort -u | paste -sd "," -)
+    options_string=$( \
+      cut -d "$DELIM" -f $((PF_IDXS[j]+1)) < "$DATA_FILE" | \
+      tail -n +2 | \
+      sed '/^\s*$/d' | \
+      sort -u | \
+      paste -sd "," -
+    )
+    [[ -z "$options_string" ]] && { echo "skip (no options for field: $name)"; return 0; }
     gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" --single-select-options "$options_string" >/dev/null
   else
     gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" >/dev/null
