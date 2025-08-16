@@ -46,3 +46,7 @@ label with name "ID:59" already exists; use `--force` to update its color and de
 ---
 ---
 ---
+---
+---
+- [2025-08-16 11:18:21] source: Manual Import v3/import | script: SCRIPTS/ae-fields.sh | line: 116 | exit: 1 | cmd: gh project field-create "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --name "$name" --data-type "$type" --single-select-options "$options_string" > /dev/null
+
