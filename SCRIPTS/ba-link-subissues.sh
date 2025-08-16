@@ -20,6 +20,7 @@ source "$(dirname "$0")/logging.sh"
 # rich trace with timestamps, line numbers, and the exact command that failed
 PS4='+ [${EPOCHREALTIME}] ${BASH_SOURCE##*/}:${LINENO}: ${FUNCNAME[0]:-main}: '
 set -x
+# shellcheck disable=SC2154
 trap 'ec=$?; echo "::error file=${BASH_SOURCE[0]},line=${LINENO}::${BASH_COMMAND} (exit $ec)"; exit $ec' ERR
 
 echo "gh version: $(gh --version 2>&1)"
@@ -78,7 +79,8 @@ lvl_num() {
 LOG_CUR="$(lvl_num "$LOG_LEVEL")"
 log() {
   local lvl="$1"; shift
-  local n="$(lvl_num "$lvl")"
+  local n
+  n="$(lvl_num "$lvl")"
   (( n < LOG_CUR )) && return 0
   printf '%s %-5s %s\n' "$(_ts)" "${lvl^^}" "$*" >&2
 }
@@ -199,7 +201,7 @@ process_parent() {
   declare -A EXIST=()
   for e in "${existing[@]:-}"; do [[ -n "$e" ]] && EXIST["$e"]=1; done
 
-  local owner parent_owner child_repo child_num child_owner cid linked=0
+  local parent_owner child_repo child_num child_owner cid linked=0
   parent_owner="$(owner_of "$GH_REPO")"
   for token in "${candidates[@]}"; do
     # Normalize to OWNER/REPO#NUM
@@ -306,3 +308,4 @@ main() {
 }
 
 main "$@"
+exit 0
