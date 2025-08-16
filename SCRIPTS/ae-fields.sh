@@ -101,7 +101,7 @@ done
 (( TITLE_IDX >= 0 )) || { echo "ERROR: no *title* column in $DATA_FILE"; exit 1; }
 
 # ---- Cache fields json for idempotent checks ----
-FIELDS_JSON="$(mktemp)"; trap 'rm -f "$FIELDS_JSON"' RETURN
+FIELDS_JSON="$(mktemp)"; trap 'rm -f "$FIELDS_JSON"' EXIT
 gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json > "$FIELDS_JSON"
 
 ensure_field(){
