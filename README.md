@@ -3,9 +3,10 @@
 Automates label, issue, sub-issue and project creation from a TSV/CSV.
 
 ## Quick Links
-| Workflows | Scripts | Paths |
-| --- | --- | --- |
-| [`manual-import-v3.yml`](.github/workflows/manual-import-v3.yml)<br>[`link-subissues.yml`](.github/workflows/link-subissues.yml)<br>[`template.yml`](.github/workflows/template.yml) | [`aa-labels.sh`](SCRIPTS/aa-labels.sh)<br>[`ab-issues.sh`](SCRIPTS/ab-issues.sh)<br>[`ac-subissues.sh`](SCRIPTS/ac-subissues.sh)<br>[`ad-project.sh`](SCRIPTS/ad-project.sh)<br>[`ae-fields.sh`](SCRIPTS/ae-fields.sh)<br>[`ba-link-subissues.sh`](SCRIPTS/ba-link-subissues.sh)<br>[`logging.sh`](SCRIPTS/logging.sh)<br>[`purge_ALL-localrun.sh`](SCRIPTS/purge_ALL-localrun.sh) | [`TSV_HERE/`](TSV_HERE/)<br>[`OUTPUTS/`](OUTPUTS/)<br>[`SCRIPTS/`](SCRIPTS/)<br>[`.github/workflows/`](.github/workflows/) |
+ 
+| Workflows | Scripts | Outputs | Paths |
+| --- | --- | --- | --- |
+| [`manual-import-v3.yml`](.github/workflows/manual-import-v3.yml)<br>[`link-subissues.yml`](.github/workflows/link-subissues.yml)<br>[`template.yml`](.github/workflows/template.yml) | [`aa-labels.sh`](SCRIPTS/aa-labels.sh)<br>[`ab-issues.sh`](SCRIPTS/ab-issues.sh)<br>[`ac-subissues.sh`](SCRIPTS/ac-subissues.sh)<br>[`ad-project.sh`](SCRIPTS/ad-project.sh)<br>[`ae-fields.sh`](SCRIPTS/ae-fields.sh)<br>[`ba-link-subissues.sh`](SCRIPTS/ba-link-subissues.sh)<br>[`logging.sh`](SCRIPTS/logging.sh)<br>[`purge_ALL-localrun.sh`](SCRIPTS/purge_ALL-localrun.sh) | [`issue_map.tsv`](OUTPUTS/issue_map.tsv)<br>[`subissue_map.tsv`](OUTPUTS/subissue_map.tsv)<br>[`project_number.txt`](OUTPUTS/project_number.txt)<br>[`errors.md`](OUTPUTS/errors.md)<br>[`info.md`](OUTPUTS/info.md) | [`TSV_HERE/`](TSV_HERE/)<br>[`OUTPUTS/`](OUTPUTS/)<br>[`SCRIPTS/`](SCRIPTS/)<br>[`.github/workflows/`](.github/workflows/) |
 
 ## Script Catalog
 | Script | Role | Inputs | Outputs |
