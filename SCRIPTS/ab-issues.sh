@@ -5,7 +5,7 @@ source "$(dirname "$0")/logging.sh"
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [DATA_FILE or GLOB]
-Creates issues from TSV/CSV. No idempotency (re-runs will create duplicates).
+Creates issues from TSV/CSV. Idempotent via OUTPUTS/issue_map.tsv.
 
 Env:
   DATA_FILE (optional)  used if no positional arg
@@ -40,6 +40,14 @@ shopt -u nullglob
 DELIM=$'\t'; [[ "$DATA_FILE" == *.csv ]] && DELIM=','
 
 mkdir -p OUTPUTS
+MAP_OUT="OUTPUTS/issue_map.tsv"
+touch "$MAP_OUT"
+
+# load existing titles for idempotency
+declare -A HAVE_TITLE=()
+while IFS=$'\t' read -r t _; do
+  [[ -n "$t" ]] && HAVE_TITLE["$t"]=1
+done < "$MAP_OUT"
 
 # headers
 IFS= read -r HEADER_LINE < "$DATA_FILE" || { echo "ERROR: empty file: $DATA_FILE"; exit 1; }
@@ -56,8 +64,6 @@ done
 (( TITLE_IDX >= 0 )) || { echo "ERROR: no *title* column found in $DATA_FILE"; exit 1; }
 
 TMPDIR="$(mktemp -d)"; trap 'rm -rf "$TMPDIR"' EXIT
-MAP_OUT="OUTPUTS/issue_map.tsv"
-: > "$MAP_OUT"
 
 while IFS= read -r line; do
   mapfile -t vals < <(
@@ -67,6 +73,10 @@ while IFS= read -r line; do
 
   title="${vals[$TITLE_IDX]:-}"
   [[ -z "$title" ]] && { echo "skip: empty title"; continue; }
+  if [[ -n "${HAVE_TITLE[$title]:-}" ]]; then
+    echo "skip existing: $title"
+    continue
+  fi
 
   # labels
   label_args=()
@@ -94,6 +104,7 @@ while IFS= read -r line; do
   fi
   num="$(basename "$url")"
   printf "%s\t%s\t%s\n" "$title" "$url" "$num" >> "$MAP_OUT"
+  HAVE_TITLE["$title"]=1
 
   # soften rate limits
   sleep 1
