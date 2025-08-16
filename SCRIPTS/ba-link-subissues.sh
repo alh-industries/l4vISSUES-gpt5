@@ -5,7 +5,7 @@
 # and formally link them as sub-issues of the parent issue.
 #
 # Requires: GitHub CLI (`gh`) authenticated with a token that can write issues.
-# Uses only `gh api` + `--jq`, no external `jq` dependency.
+# Uses only `gh api` with `--jq`; no external `jq` dependency.
 #
 # Exit codes:
 #  0 success
@@ -28,7 +28,7 @@ echo "gh auth status:"
 gh auth status || { echo "::error ::gh auth not ok"; }
 
 echo "Current REST rate limit:"
-gh api rate_limit | jq -r '.resources.core | "limit=\(.limit) remaining=\(.remaining) reset=\(.reset)"' || true
+gh api rate_limit --jq '.resources.core | "limit=\(.limit) remaining=\(.remaining) reset=\(.reset)"' || true
 
 
 # ------------ defaults (overridable via env or flags) -------------------------
